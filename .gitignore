@@ -1,0 +1,15 @@
+# Dependências do Node - Frontend (React/Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# Ambientes virtuais e pacotes Python
+backend/venv/
+backend/__pycache__/
+*.pyc
+
+# Logs e arquivos temporários
+logs/
+*.log
+.DS_Store
