@@ -9,7 +9,14 @@ backend/venv/
 backend/__pycache__/
 *.pyc
 
+# Segurança: Arquivos de credenciais e produção
+backend/.env
+
 # Logs e arquivos temporários
 logs/
 *.log
+nohup.out
 .DS_Store
+
+# graphify-axet
+.graphify/

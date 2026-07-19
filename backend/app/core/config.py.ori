@@ -1,0 +1,26 @@
+import os
+from functools import lru_cache
+from typing import List
+from dotenv import load_dotenv
+
+# Carrega o .env localizado na raiz do backend (/opt/product_lab/backend/.env)
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+
+class Settings:
+    APP_ENV: str          = os.getenv("APP_ENV", "development")
+    DEBUG: bool           = os.getenv("DEBUG", "true").lower() == "true"
+    SECRET_KEY: str       = os.getenv("SECRET_KEY", "product-lab-secret-key")
+    API_V1_PREFIX: str    = "/api/v1"
+    PROJECT_NAME: str     = "Product Lab API"
+    VERSION: str          = "1.0.0"
+    DATABASE_URL: str     = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/product_lab")
+    DATABASE_URL_SYNC: str= os.getenv("DATABASE_URL_SYNC", "postgresql://postgres:postgres@localhost:5432/product_lab")
+    DB_POOL_SIZE: int     = int(os.getenv("DB_POOL_SIZE", "10"))
+    DB_MAX_OVERFLOW: int  = int(os.getenv("DB_MAX_OVERFLOW", "20"))
+    ALLOWED_ORIGINS: List[str] = os.getenv("ALLOWED_ORIGINS","http://localhost:5173,http://localhost:3000").split(",")
+
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()
+
+settings = get_settings()
