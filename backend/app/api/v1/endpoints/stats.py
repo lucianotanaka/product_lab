@@ -29,4 +29,7 @@ def get_stats(db: Session = Depends(get_db)):
         "product_impacts":        count("product_impacts"),
         "product_features":       count("product_features"),
         "users":                  count("users"),
+        "communications":         count("communications"),
+        "publications":           count("publications"),
+        "audiences":              count("audiences"),
     }

@@ -11,6 +11,7 @@ import RoadmapPage from "./modules/roadmap/pages/RoadmapPage";
 import StakeholdersPage from "./modules/stakeholders/pages/StakeholdersPage";
 import VPCPage from "./modules/vpc/pages/VPCPage";
 import BacklogPage from "./modules/backlog/pages/BacklogPage";
+import CommunicationPage from "./modules/communication/pages/CommunicationPage";
 
 // ─── Protected Route ──────────────────────────────────────────────────────────
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -53,6 +54,7 @@ function AppRoutes() {
       <Route path="/modules/stakeholders" element={<P component={StakeholdersPage} />} />
       <Route path="/modules/vpc" element={<P component={VPCPage} />} />
       <Route path="/modules/backlog" element={<P component={BacklogPage} />} />
+      <Route path="/modules/communication" element={<P component={CommunicationPage} />} />
       {/* Catch-all → login */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

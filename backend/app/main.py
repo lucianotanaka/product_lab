@@ -57,6 +57,9 @@ def run_migrations():
         # vpc_items
         conn.execute(text("ALTER TABLE vpc_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"))
 
+        # Communication Domain — tabelas criadas via DDL v1.0 (já existem no banco)
+        # Nenhuma migração necessária para este domínio.
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,

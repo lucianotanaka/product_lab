@@ -17,6 +17,7 @@ interface SystemStats {
   product_impacts:      number;
   product_features:     number;
   users:                number;
+  communications:       number;
 }
 
 // Module route map
@@ -31,6 +32,7 @@ const MODULE_ROUTES: Record<string, string> = {
   vpc:            "/modules/vpc",
   backlog:        "/modules/backlog",
   research:       "/modules/knowledge",
+  communication:  "/modules/communication",
 };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -63,7 +65,8 @@ const MODULES: Module[] = [
   { id: "stakeholders", icon: "◉", title: "Stakeholders", description: "Gestão de partes interessadas com mapeamento de influência e comunicação.", status: "ATIVO", color: "#00ff88" },
   { id: "vpc", icon: "⬡", title: "Value Canvas", description: "Canvas de proposta de valor com análise de jobs, pains e gains do cliente.", status: "ATIVO", color: "#00d4ff" },
   { id: "research", icon: "◈", title: "Research Lab", description: "Repositório de pesquisas, experimentos e insights validados com usuários reais.", status: "STANDBY", color: "#c084fc" },
-  { id: "backlog",  icon: "◫", title: "Backlog",      description: "Gestão de user stories, tasks, bugs e epics com story points e critérios de aceite.", status: "ATIVO", color: "#ff9900" },
+  { id: "backlog",       icon: "◫", title: "Backlog",      description: "Gestão de user stories, tasks, bugs e epics com story points e critérios de aceite.", status: "ATIVO",    color: "#ff9900" },
+  { id: "communication", icon: "◈", title: "Comunicação",  description: "Gestão de comunicações, anúncios, newsletters e atualizações de status para stakeholders.", status: "ATIVO", color: "#c084fc" },
 ];
 
 
@@ -295,7 +298,7 @@ export default function HomePage() {
           <div className="hero-telemetry">
             {[
               { label: "STATUS", value: "ATIVO", active: true },
-              { label: "MÓDULOS", value: "09" },
+              { label: "MÓDULOS", value: "10" },
               { label: "UPTIME", value: "99.8%" },
               { label: "LABS", value: "∞" },
             ].map((item, i) => (
@@ -368,6 +371,7 @@ export default function HomePage() {
             { label: "VPC Canvas",     value: stats?.vpc_items ?? 0 },
             { label: "Features",       value: stats?.product_features ?? 0 },
             { label: "Impactos",       value: stats?.product_impacts ?? 0 },
+            { label: "Comunicações",   value: stats?.communications ?? 0 },
             { label: "Usuários",       value: stats?.users ?? 0 },
           ].map((s) => (
             <div key={s.label} className="stat-card">
