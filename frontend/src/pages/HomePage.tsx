@@ -256,7 +256,7 @@ export default function HomePage() {
         <div className="pl-hero__content">
           <div className="hero-badge">
             <span className="hero-badge__dot" />
-            <span className="hero-badge__text">// SISTEMA OPERACIONAL v2.0 — PROTOCOLO INICIADO //</span>
+            <span className="hero-badge__text">// SISTEMA OPERACIONAL {import.meta.env.VITE_APP_VERSION ?? "dev"} — PROTOCOLO INICIADO //</span>
           </div>
 
           <h1 className="hero-title">

@@ -8,6 +8,11 @@ NC='\033[0m' # Sem cor
 
 echo -e "${YELLOW}[1/5] Iniciando o processo de build do React...${NC}"
 
+# Coleta a versão do Git (tag mais próxima ou hash curto)
+VITE_APP_VERSION=$(git -C /opt/product_lab describe --tags --always --dirty 2>/dev/null || echo "dev")
+export VITE_APP_VERSION
+echo -e "    Versão detectada: ${CYAN:-}${VITE_APP_VERSION}${NC:-}"
+
 # 1. Executa a compilação do frontend
 if npm run build; then
     echo -e "${GREEN}✔ Build compilado com sucesso!${NC}"
