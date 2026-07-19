@@ -3,8 +3,9 @@ import ModuleLayout from "../../../shared/components/ModuleLayout";
 import { apiGet, apiPost, apiPatch, apiDelete } from "../../../shared/services/api";
 import type { Paginated } from "../../../shared/services/api";
 
-interface RoadmapItem { id: string; product_id: string; title: string; description?: string; type: string; status: string; start_date?: string; end_date?: string; quarter?: string; created_at: string; }
-const EMPTY = { title: "", description: "", type: "feature", status: "planned", start_date: "", end_date: "", quarter: "" };
+interface ItemType { item_type_id: number; name: string; display_order: number; is_active: boolean; }
+interface RoadmapItem { id: string; product_id: string; title: string; description?: string; item_type_id?: number; type?: string; status: string; start_date?: string; end_date?: string; quarter?: string; created_at: string; }
+const EMPTY = { title: "", description: "", item_type_id: "", status: "planned", start_date: "", end_date: "", quarter: "" };
 
 export default function RoadmapPage() {
   const [productId, setProductId] = useState(localStorage.getItem("pl_product") ?? "");
@@ -12,7 +13,11 @@ export default function RoadmapPage() {
   const [page, setPage] = useState(1); const [loading, setLoading] = useState(false);
   const [error, setError] = useState(""); const [modal, setModal] = useState<"create"|"edit"|null>(null);
   const [form, setForm] = useState({ ...EMPTY }); const [editing, setEditing] = useState<RoadmapItem|null>(null);
-  const [saving, setSaving] = useState(false); const SIZE = 20;
+  const [saving, setSaving] = useState(false);
+  const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
+  const SIZE = 20;
+  const typeLabel = (id?: number) => itemTypes.find(t => t.item_type_id === id)?.name ?? "—";
+  useEffect(() => { apiGet<ItemType[]>("/backlog/types/list").then(setItemTypes).catch(() => {}); }, []);
 
   const load = async (p = page, pid = productId) => {
     setLoading(true); setError("");
@@ -30,7 +35,7 @@ export default function RoadmapPage() {
   const handleProductChange = (id: string) => { localStorage.setItem("pl_product", id); setProductId(id); };
   const openCreate = () => { setForm({ ...EMPTY }); setEditing(null); setModal("create"); };
   const openEdit = (item: RoadmapItem) => {
-    setForm({ title: item.title, description: item.description ?? "", type: item.type, status: item.status, start_date: item.start_date ? item.start_date.slice(0,10) : "", end_date: item.end_date ? item.end_date.slice(0,10) : "", quarter: item.quarter ?? "" });
+    setForm({ title: item.title, description: item.description ?? "", item_type_id: item.item_type_id ? String(item.item_type_id) : "", status: item.status, start_date: item.start_date ? item.start_date.slice(0,10) : "", end_date: item.end_date ? item.end_date.slice(0,10) : "", quarter: item.quarter ?? "" });
     setEditing(item); setModal("edit");
   };
   const closeModal = () => { setModal(null); setEditing(null); };
@@ -40,7 +45,7 @@ export default function RoadmapPage() {
     if (!productId && modal === "create") { setError("Selecione um produto"); return; }
     setSaving(true);
     try {
-      const body = { ...form, start_date: form.start_date || null, end_date: form.end_date || null, quarter: form.quarter || null };
+      const body = { ...form, item_type_id: form.item_type_id ? parseInt(form.item_type_id, 10) : null, start_date: form.start_date || null, end_date: form.end_date || null, quarter: form.quarter || null };
       if (modal === "create") await apiPost("/roadmap", { ...body, product_id: productId });
       else if (editing) await apiPatch(`/roadmap/${editing.id}`, body);
       closeModal(); load(page);
@@ -78,7 +83,7 @@ export default function RoadmapPage() {
               {items.map(item => (
                 <tr key={item.id}>
                   <td><strong>{item.title}</strong>{item.description && <div style={{fontSize:10,color:"#7899b0",marginTop:2}}>{item.description.slice(0,60)}…</div>}</td>
-                  <td><span className={`badge badge--${item.type}`}>{item.type.toUpperCase()}</span></td>
+                  <td><span style={{fontSize:10,letterSpacing:1,color:"#00e5cc",border:"1px solid rgba(0,229,204,0.3)",padding:"2px 6px"}}>{typeLabel(item.item_type_id).toUpperCase()}</span></td>
                   <td><span className={`badge badge--${item.status}`}>{item.status.toUpperCase()}</span></td>
                   <td><span className="roadmap-quarter">{item.quarter || "—"}</span></td>
                   <td style={{color:"#7899b0",whiteSpace:"nowrap"}}>{fmt(item.start_date)}</td>
@@ -99,7 +104,7 @@ export default function RoadmapPage() {
               <div className="mod-field"><label className="mod-field__label">TÍTULO <span>*</span></label><input className="mod-input" value={form.title} onChange={e => setForm(f=>({...f,title:e.target.value}))} placeholder="Nome da iniciativa" /></div>
               <div className="mod-field"><label className="mod-field__label">DESCRIÇÃO</label><textarea className="mod-textarea" value={form.description} onChange={e => setForm(f=>({...f,description:e.target.value}))} placeholder="Descrição..." /></div>
               <div className="mod-field-row">
-                <div className="mod-field"><label className="mod-field__label">TIPO</label><select className="mod-select" value={form.type} onChange={e => setForm(f=>({...f,type:e.target.value}))}><option value="feature">FEATURE</option><option value="epic">EPIC</option><option value="milestone">MILESTONE</option><option value="bug">BUG</option></select></div>
+                <div className="mod-field"><label className="mod-field__label">TIPO</label><select className="mod-select" value={form.item_type_id} onChange={e => setForm(f=>({...f,item_type_id:e.target.value}))}><option value="">— SELECIONE —</option>{itemTypes.map(t=><option key={t.item_type_id} value={t.item_type_id}>{t.name.toUpperCase()}</option>)}</select></div>
                 <div className="mod-field"><label className="mod-field__label">STATUS</label><select className="mod-select" value={form.status} onChange={e => setForm(f=>({...f,status:e.target.value}))}><option value="planned">PLANNED</option><option value="in_progress">IN PROGRESS</option><option value="completed">COMPLETED</option><option value="cancelled">CANCELLED</option></select></div>
               </div>
               <div className="mod-field-row">

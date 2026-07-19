@@ -17,6 +17,7 @@ class RoadmapItem(Base):
     product_id=Column(String(36),nullable=False,index=True)
     title=Column(String(500),nullable=False); description=Column(Text)
     type=Column(SAE(RoadmapItemType),default=RoadmapItemType.feature)
+    item_type_id=Column(Integer,nullable=True)     # FK → backlog_item_types.item_type_id
     status=Column(SAE(RoadmapItemStatus),default=RoadmapItemStatus.planned)
     start_date=Column(DateTime,nullable=True); end_date=Column(DateTime,nullable=True); quarter=Column(String(20))
     created_at=Column(DateTime,default=datetime.utcnow,nullable=False)

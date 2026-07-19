@@ -17,13 +17,16 @@ def get_stats(db: Session = Depends(get_db)):
             return 0
 
     return {
-        "products":           count("products"),
-        "decisions":          count("decisions"),
-        "knowledge_items":    count("knowledge_items"),
-        "risks":              count("risks"),
-        "roadmap_items":      count("roadmap_items"),
-        "prioritization_items": count("prioritization_items"),
-        "stakeholders":       count("stakeholders"),
-        "vpc_items":          count("vpc_items"),
-        "users":              count("users"),
+        "products":               count("products"),
+        "decisions":              count("decisions"),
+        "knowledge_items":        count("knowledge_articles"),
+        "risks":                  count("risks"),
+        "roadmap_items":          count("roadmap_items"),
+        "prioritization_items":   count("prioritization_items"),
+        "stakeholders":           count("stakeholders"),
+        "vpc_items":              count("value_proposition_canvas"),
+        "backlog_items":          count("backlog_items"),
+        "product_impacts":        count("product_impacts"),
+        "product_features":       count("product_features"),
+        "users":                  count("users"),
     }

@@ -7,9 +7,13 @@ from .risk import Risk
 from .roadmap import RoadmapItem
 from .stakeholder import Stakeholder
 from .vpc import VPCItem
+from .backlog import BacklogItem, BacklogItemType, BacklogItemSuggestion
+from .product_structure import ProductCapability, ProductFeature, ProductImpact, ValuePropositionCanvas
 
 __all__ = [
     "User", "Product", "Decision",
     "KnowledgeArticle", "KnowledgeReference",
     "PrioritizationItem", "Risk", "RoadmapItem", "Stakeholder", "VPCItem",
+    "BacklogItem", "BacklogItemType", "BacklogItemSuggestion",
+    "ProductCapability", "ProductFeature", "ProductImpact", "ValuePropositionCanvas",
 ]

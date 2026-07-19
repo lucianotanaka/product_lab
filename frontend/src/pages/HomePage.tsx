@@ -13,6 +13,9 @@ interface SystemStats {
   prioritization_items: number;
   stakeholders:         number;
   vpc_items:            number;
+  backlog_items:        number;
+  product_impacts:      number;
+  product_features:     number;
   users:                number;
 }
 
@@ -26,6 +29,7 @@ const MODULE_ROUTES: Record<string, string> = {
   risks:          "/modules/risks",
   stakeholders:   "/modules/stakeholders",
   vpc:            "/modules/vpc",
+  backlog:        "/modules/backlog",
   research:       "/modules/knowledge",
 };
 
@@ -59,6 +63,7 @@ const MODULES: Module[] = [
   { id: "stakeholders", icon: "◉", title: "Stakeholders", description: "Gestão de partes interessadas com mapeamento de influência e comunicação.", status: "ATIVO", color: "#00ff88" },
   { id: "vpc", icon: "⬡", title: "Value Canvas", description: "Canvas de proposta de valor com análise de jobs, pains e gains do cliente.", status: "ATIVO", color: "#00d4ff" },
   { id: "research", icon: "◈", title: "Research Lab", description: "Repositório de pesquisas, experimentos e insights validados com usuários reais.", status: "STANDBY", color: "#c084fc" },
+  { id: "backlog",  icon: "◫", title: "Backlog",      description: "Gestão de user stories, tasks, bugs e epics com story points e critérios de aceite.", status: "ATIVO", color: "#ff9900" },
 ];
 
 
@@ -359,7 +364,10 @@ export default function HomePage() {
             { label: "Riscos",         value: stats?.risks ?? 0 },
             { label: "Roadmap items",  value: stats?.roadmap_items ?? 0 },
             { label: "Stakeholders",   value: stats?.stakeholders ?? 0 },
-            { label: "VPC items",      value: stats?.vpc_items ?? 0 },
+            { label: "Backlog items",  value: stats?.backlog_items ?? 0 },
+            { label: "VPC Canvas",     value: stats?.vpc_items ?? 0 },
+            { label: "Features",       value: stats?.product_features ?? 0 },
+            { label: "Impactos",       value: stats?.product_impacts ?? 0 },
             { label: "Usuários",       value: stats?.users ?? 0 },
           ].map((s) => (
             <div key={s.label} className="stat-card">

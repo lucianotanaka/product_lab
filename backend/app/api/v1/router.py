@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .endpoints import auth, products, decisions, knowledge, prioritization, risks, roadmap, stakeholders, vpc, stats
+from .endpoints import auth, products, decisions, knowledge, prioritization, risks, roadmap, stakeholders, vpc, stats, backlog
 
 router = APIRouter()
 router.include_router(auth.router,            prefix="/auth",            tags=["Auth"])
@@ -12,3 +12,4 @@ router.include_router(roadmap.router,         prefix="/roadmap",         tags=["
 router.include_router(stakeholders.router,    prefix="/stakeholders",    tags=["Stakeholders"])
 router.include_router(vpc.router,             prefix="/vpc",             tags=["VPC"])
 router.include_router(stats.router,           prefix="/stats",           tags=["Stats"])
+router.include_router(backlog.router,         prefix="/backlog",         tags=["Backlog"])

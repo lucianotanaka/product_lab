@@ -11,15 +11,18 @@ from typing import List
 
 class RoadmapCreate(BaseModel):
     product_id:str; title:str; description:Optional[str]=None
+    item_type_id:Optional[int]=None
     type:RoadmapItemType=RoadmapItemType.feature; status:RoadmapItemStatus=RoadmapItemStatus.planned
     start_date:Optional[datetime]=None; end_date:Optional[datetime]=None; quarter:Optional[str]=None
 class RoadmapUpdate(BaseModel):
-    title:Optional[str]=None; description:Optional[str]=None; type:Optional[RoadmapItemType]=None
+    title:Optional[str]=None; description:Optional[str]=None
+    item_type_id:Optional[int]=None; type:Optional[RoadmapItemType]=None
     status:Optional[RoadmapItemStatus]=None; start_date:Optional[datetime]=None
     end_date:Optional[datetime]=None; quarter:Optional[str]=None
 class RoadmapOut(BaseModel):
     id:str; product_id:str; title:str; description:Optional[str]=None
-    type:RoadmapItemType; status:RoadmapItemStatus; start_date:Optional[datetime]=None
+    item_type_id:Optional[int]=None
+    type:Optional[RoadmapItemType]=None; status:RoadmapItemStatus; start_date:Optional[datetime]=None
     end_date:Optional[datetime]=None; quarter:Optional[str]=None; created_at:datetime; updated_at:datetime
     class Config: from_attributes=True
 

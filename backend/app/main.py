@@ -47,6 +47,7 @@ def run_migrations():
         conn.execute(text("ALTER TABLE roadmap_items ADD COLUMN IF NOT EXISTS start_date TIMESTAMP"))
         conn.execute(text("ALTER TABLE roadmap_items ADD COLUMN IF NOT EXISTS end_date TIMESTAMP"))
         conn.execute(text("ALTER TABLE roadmap_items ADD COLUMN IF NOT EXISTS quarter VARCHAR(20)"))
+        conn.execute(text("ALTER TABLE roadmap_items ADD COLUMN IF NOT EXISTS item_type_id INTEGER"))
 
         # prioritization_items
         conn.execute(text("ALTER TABLE prioritization_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"))
