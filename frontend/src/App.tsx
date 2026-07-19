@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ProductProvider } from "./contexts/ProductContext";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import ProductsPage from "./modules/products/pages/ProductsPage";
@@ -66,7 +67,9 @@ export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AuthProvider>
-        <AppRoutes />
+        <ProductProvider>
+          <AppRoutes />
+        </ProductProvider>
       </AuthProvider>
     </BrowserRouter>
   );
