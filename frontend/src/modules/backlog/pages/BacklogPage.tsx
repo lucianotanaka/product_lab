@@ -11,28 +11,47 @@ interface ItemType {
 }
 
 interface BacklogItem {
-  item_id:             number;
-  product_id?:         number;
-  feature_id?:         number;
-  sprint_id?:          number;
-  ado_id?:             string;
-  item_type_id?:       number;
-  title:               string;
-  description?:        string;
-  current_status:      string;
-  business_value?:     string;
-  acceptance_criteria?:string;
-  story_points?:       number;
-  priority:            number;
-  created_at:          string;
-  updated_at:          string;
-  completed_at?:       string;
+  item_id:              number;
+  product_id?:          number;
+  feature_id?:          number;
+  sprint_id?:           number;
+  ado_id?:              string;
+  item_type_id?:        number;
+  title:                string;
+  description?:         string;
+  current_status:       string;
+  business_value?:      string;
+  acceptance_criteria?: string;
+  story_points?:        number;
+  priority:             number;
+  wsjf_business_value:  number;
+  wsjf_time_criticality:number;
+  wsjf_risk_reduction:  number;
+  wsjf_job_size:        number;
+  wsjf_score:           number;
+  created_at:           string;
+  updated_at:           string;
+  completed_at?:        string;
 }
+
+const FIBONACCI = [1, 2, 3, 5, 8, 13, 20];
+
+const calcWsjf = (bv: number, tc: number, rr: number, js: number): number =>
+  js > 0 ? Math.round(((bv + tc + rr) / js) * 10) : 0;
+
+const wsjfLabel = (score: number): { text: string; color: string } => {
+  if (score >= 200) return { text: "CRÍTICO",  color: "#ff6b6b" };
+  if (score >= 100) return { text: "ALTO",     color: "#ff9900" };
+  if (score >= 50)  return { text: "MÉDIO",    color: "#00d4ff" };
+  return                    { text: "BAIXO",   color: "#7899b0" };
+};
 
 const EMPTY = {
   title: "", description: "", item_type_id: "", current_status: "open",
   ado_id: "", story_points: "", priority: "3",
   business_value: "", acceptance_criteria: "",
+  wsjf_business_value: "1", wsjf_time_criticality: "1",
+  wsjf_risk_reduction: "1", wsjf_job_size: "1",
 };
 
 const STATUSES = ["open", "in_progress", "done", "blocked", "cancelled"];
@@ -43,9 +62,6 @@ const statusColor = (s: string) =>
 
 const priorityLabel = (p: number) =>
   ({ 1: "CRITICAL", 2: "HIGH", 3: "MEDIUM", 4: "LOW", 5: "MINIMAL" }[p] ?? String(p));
-
-const priorityColor = (p: number) =>
-  ({ 1: "#ff6b6b", 2: "#ff9900", 3: "#00d4ff", 4: "#00e5cc", 5: "#7899b0" }[p] ?? "#7899b0");
 
 export default function BacklogPage() {
   const [productId, setProductId] = useState(localStorage.getItem("pl_product") ?? "");
@@ -98,6 +114,10 @@ export default function BacklogPage() {
       ado_id: item.ado_id ?? "", story_points: String(item.story_points ?? ""),
       priority: String(item.priority), business_value: item.business_value ?? "",
       acceptance_criteria: item.acceptance_criteria ?? "",
+      wsjf_business_value:   String(item.wsjf_business_value   ?? 1),
+      wsjf_time_criticality: String(item.wsjf_time_criticality ?? 1),
+      wsjf_risk_reduction:   String(item.wsjf_risk_reduction   ?? 1),
+      wsjf_job_size:         String(item.wsjf_job_size         ?? 1),
     });
     setEditing(item); setModal("edit");
   };
@@ -107,12 +127,21 @@ export default function BacklogPage() {
     if (!form.title.trim()) return;
     setSaving(true);
     try {
+      const wBv = parseInt(form.wsjf_business_value,   10) || 1;
+      const wTc = parseInt(form.wsjf_time_criticality, 10) || 1;
+      const wRr = parseInt(form.wsjf_risk_reduction,   10) || 1;
+      const wJs = parseInt(form.wsjf_job_size,         10) || 1;
       const body = {
         ...form,
-        product_id:   pid ?? null,
-        item_type_id: form.item_type_id ? parseInt(form.item_type_id, 10) : null,
-        story_points: form.story_points ? parseInt(form.story_points, 10) : null,
-        priority:     parseInt(form.priority, 10),
+        product_id:           pid ?? null,
+        item_type_id:         form.item_type_id ? parseInt(form.item_type_id, 10) : null,
+        story_points:         form.story_points ? parseInt(form.story_points, 10) : null,
+        priority:             parseInt(form.priority, 10),
+        wsjf_business_value:  wBv,
+        wsjf_time_criticality:wTc,
+        wsjf_risk_reduction:  wRr,
+        wsjf_job_size:        wJs,
+        wsjf_score:           calcWsjf(wBv, wTc, wRr, wJs),
       };
       if (modal === "create") await apiPost("/backlog", body);
       else if (editing)       await apiPatch(`/backlog/${editing.item_id}`, body);
@@ -170,7 +199,7 @@ export default function BacklogPage() {
             <thead>
               <tr>
                 <th>TÍTULO</th><th>TIPO</th><th>STATUS</th>
-                <th>PRIORIDADE</th><th>SP</th><th>ADO</th><th></th>
+                <th>WSJF</th><th>SP</th><th>ADO</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -197,9 +226,14 @@ export default function BacklogPage() {
                     </span>
                   </td>
                   <td>
-                    <span style={{ fontSize: 10, color: priorityColor(item.priority), letterSpacing: 1 }}>
-                      {priorityLabel(item.priority)}
-                    </span>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: wsjfLabel(item.wsjf_score).color }}>
+                        {item.wsjf_score}
+                      </div>
+                      <div style={{ fontSize: 8, letterSpacing: 1, color: wsjfLabel(item.wsjf_score).color }}>
+                        {wsjfLabel(item.wsjf_score).text}
+                      </div>
+                    </div>
                   </td>
                   <td style={{ textAlign: "center", color: "#c8d8e8" }}>
                     {item.story_points ?? "—"}
@@ -299,6 +333,45 @@ export default function BacklogPage() {
                 <textarea className="mod-textarea" value={form.business_value}
                   onChange={e => setForm(f => ({ ...f, business_value: e.target.value }))}
                   placeholder="Descreva o valor para o negócio..." />
+              </div>
+
+              {/* WSJF Section */}
+              <div style={{ borderTop: "1px solid rgba(0,212,255,0.15)", paddingTop: 12, marginTop: 4 }}>
+                <div style={{ fontSize: 10, letterSpacing: 2, color: "#00d4ff", marginBottom: 10 }}>
+                  // WSJF — WEIGHTED SHORTEST JOB FIRST //
+                </div>
+                <div className="mod-field-row">
+                  {[
+                    { key: "wsjf_business_value",   label: "VALOR DE NEGÓCIO" },
+                    { key: "wsjf_time_criticality", label: "CRITICIDADE TEMPO" },
+                    { key: "wsjf_risk_reduction",   label: "REDUÇÃO DE RISCO" },
+                    { key: "wsjf_job_size",         label: "TAMANHO DO JOB" },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="mod-field">
+                      <label className="mod-field__label" style={{ fontSize: 9 }}>{label}</label>
+                      <select className="mod-select"
+                        value={(form as Record<string, string>)[key]}
+                        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}>
+                        {FIBONACCI.map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                {(() => {
+                  const score = calcWsjf(
+                    parseInt(form.wsjf_business_value,   10) || 1,
+                    parseInt(form.wsjf_time_criticality, 10) || 1,
+                    parseInt(form.wsjf_risk_reduction,   10) || 1,
+                    parseInt(form.wsjf_job_size,         10) || 1,
+                  );
+                  const lbl = wsjfLabel(score);
+                  return (
+                    <div style={{ fontSize: 11, letterSpacing: 1, marginTop: 6 }}>
+                      WSJF SCORE: <span style={{ color: lbl.color, fontWeight: 700, fontSize: 16 }}>{score}</span>
+                      <span style={{ color: lbl.color, marginLeft: 8, fontSize: 9 }}>— {lbl.text}</span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
             <div className="mod-modal__footer">

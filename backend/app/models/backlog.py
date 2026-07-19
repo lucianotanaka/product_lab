@@ -18,7 +18,13 @@ class BacklogItem(Base):
     acceptance_criteria = Column(Text)
     story_points        = Column(Integer)
     priority            = Column(Integer, default=3)
-    created_at          = Column(DateTime, default=datetime.utcnow, nullable=False)
+    # WSJF components (Weighted Shortest Job First)
+    wsjf_business_value   = Column(Integer, default=1)
+    wsjf_time_criticality = Column(Integer, default=1)
+    wsjf_risk_reduction   = Column(Integer, default=1)
+    wsjf_job_size         = Column(Integer, default=1)
+    wsjf_score            = Column(Integer, default=0)   # (bv + tc + rr) / job_size * 10, stored as int
+    created_at            = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at          = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     completed_at        = Column(DateTime, nullable=True)
 

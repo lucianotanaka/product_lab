@@ -54,19 +54,23 @@ export default function KnowledgePage() {
   const [refSaving,  setRefSaving]  = useState(false);
 
   const SIZE = 20;
-  const pid  = productId ? parseInt(productId, 10) : undefined;
+  // special sentinel "global" filters by product_id IS NULL
+  const isGlobal = productId === "global";
+  const pid      = (!isGlobal && productId) ? parseInt(productId, 10) : undefined;
 
   const load = async (p = page) => {
     setLoading(true); setError("");
     try {
-      const qs = `page=${p}&size=${SIZE}${pid ? `&product_id=${pid}` : ""}`;
+      let qs = `page=${p}&size=${SIZE}`;
+      if (isGlobal)       qs += `&global_only=true`;
+      else if (pid)       qs += `&product_id=${pid}`;
       const r = await apiGet<Paginated<Article>>(`/knowledge?${qs}`);
       setItems(r.items); setTotal(r.total);
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Erro ao carregar"); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(1); setPage(1); }, [productId]);
+  useEffect(() => { load(1); setPage(1); }, [productId, isGlobal]);
   useEffect(() => { load(); },             [page]);
 
   const handleProductChange = (id: string) => { localStorage.setItem("pl_product", id); setProductId(id); };
@@ -129,7 +133,8 @@ export default function KnowledgePage() {
 
   return (
     <ModuleLayout moduleIcon="◈" moduleName="KNOWLEDGE BASE" moduleAccent="BASE"
-      selectedProductId={productId} onProductChange={handleProductChange}>
+      selectedProductId={productId} onProductChange={handleProductChange}
+      extraSelectorOptions={[{ value: "global", label: "⬡ PRODUCT LAB — GLOBAL" }]}>
 
       <div className="mod-header">
         <div className="mod-header__left">
@@ -163,7 +168,14 @@ export default function KnowledgePage() {
               {items.map(item => (
                 <tr key={item.article_id}>
                   <td>
-                    <strong>{item.title}</strong>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <strong>{item.title}</strong>
+                      {!item.product_id && (
+                        <span style={{ fontSize: 9, letterSpacing: 1, color: "#00e5cc",
+                          border: "1px solid rgba(0,229,204,0.3)", padding: "1px 5px",
+                          flexShrink: 0 }}>GLOBAL</span>
+                      )}
+                    </div>
                     {item.content && (
                       <div style={{ fontSize: 10, color: "#7899b0", marginTop: 2 }}>
                         {item.content.slice(0, 80)}{item.content.length > 80 ? "…" : ""}

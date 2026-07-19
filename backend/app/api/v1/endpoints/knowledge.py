@@ -60,16 +60,24 @@ router = APIRouter()
 def list_articles(
     page: int = 1, size: int = 20,
     product_id: Optional[int] = None,
+    global_only: bool = False,        # ?global_only=true → product_id IS NULL
     status: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    repo = BaseRepository(KnowledgeArticle, db)
-    filters = {}
-    if product_id is not None:
-        filters["product_id"] = product_id
+    q = db.query(KnowledgeArticle)
+
+    if global_only:
+        q = q.filter(KnowledgeArticle.product_id == None)
+    elif product_id is not None:
+        q = q.filter(KnowledgeArticle.product_id == product_id)
+
     if status is not None:
-        filters["status"] = status
-    total, items = repo.list(skip=(page - 1) * size, limit=size, **filters)
+        q = q.filter(KnowledgeArticle.status == status)
+
+    total = q.count()
+    items = q.order_by(KnowledgeArticle.created_at.desc())\
+             .offset((page - 1) * size).limit(size).all()
+
     return {"total": total, "page": page, "size": size,
             "items": [ArticleOut.model_validate(i) for i in items]}
 

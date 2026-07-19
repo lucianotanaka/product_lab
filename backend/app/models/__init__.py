@@ -5,7 +5,7 @@ from .knowledge import KnowledgeArticle, KnowledgeReference
 from .prioritization import PrioritizationItem
 from .risk import Risk
 from .roadmap import RoadmapItem
-from .stakeholder import Stakeholder
+from .stakeholder import Stakeholder, StakeholderProduct
 from .vpc import VPCItem
 from .backlog import BacklogItem, BacklogItemType, BacklogItemSuggestion
 from .product_structure import ProductCapability, ProductFeature, ProductImpact, ValuePropositionCanvas
@@ -16,4 +16,5 @@ __all__ = [
     "PrioritizationItem", "Risk", "RoadmapItem", "Stakeholder", "VPCItem",
     "BacklogItem", "BacklogItemType", "BacklogItemSuggestion",
     "ProductCapability", "ProductFeature", "ProductImpact", "ValuePropositionCanvas",
+    "StakeholderProduct",
 ]

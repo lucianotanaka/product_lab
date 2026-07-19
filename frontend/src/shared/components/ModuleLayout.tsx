@@ -11,6 +11,8 @@ export interface Product {
   status: string;
 }
 
+interface ExtraOption { value: string; label: string; }
+
 interface Props {
   moduleIcon: string;
   moduleName: string;
@@ -18,6 +20,7 @@ interface Props {
   showProductSelector?: boolean;
   selectedProductId?: string;
   onProductChange?: (id: string) => void;
+  extraSelectorOptions?: ExtraOption[];   // injected before product list
   children: React.ReactNode;
 }
 
@@ -28,6 +31,7 @@ export default function ModuleLayout({
   showProductSelector = true,
   selectedProductId = "",
   onProductChange,
+  extraSelectorOptions = [],
   children,
 }: Props) {
   const { user, logout } = useAuth();
@@ -67,6 +71,9 @@ export default function ModuleLayout({
                 onChange={(e) => onProductChange?.(e.target.value)}
               >
                 <option value="">— TODOS —</option>
+                {extraSelectorOptions.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
                 {products.map((p) => (
                   <option key={p.product_id} value={String(p.product_id)}>{p.name}</option>
                 ))}

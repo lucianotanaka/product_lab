@@ -10,51 +10,70 @@ from datetime import datetime
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
+def calc_wsjf(bv: int, tc: int, rr: int, js: int) -> int:
+    """WSJF = (CoD / Job Size) * 10, arredondado para inteiro."""
+    cost_of_delay = bv + tc + rr
+    if js <= 0: return 0
+    return round((cost_of_delay / js) * 10)
+
 class BacklogItemCreate(BaseModel):
-    product_id:          Optional[int]  = None
-    feature_id:          Optional[int]  = None
-    sprint_id:           Optional[int]  = None
-    ado_id:              Optional[str]  = None
-    item_type_id:        Optional[int]  = None
-    title:               str
-    description:         Optional[str]  = None
-    current_status:      str            = "open"
-    business_value:      Optional[str]  = None
-    acceptance_criteria: Optional[str]  = None
-    story_points:        Optional[int]  = None
-    priority:            int            = 3
+    product_id:             Optional[int]  = None
+    feature_id:             Optional[int]  = None
+    sprint_id:              Optional[int]  = None
+    ado_id:                 Optional[str]  = None
+    item_type_id:           Optional[int]  = None
+    title:                  str
+    description:            Optional[str]  = None
+    current_status:         str            = "open"
+    business_value:         Optional[str]  = None
+    acceptance_criteria:    Optional[str]  = None
+    story_points:           Optional[int]  = None
+    priority:               int            = 3
+    wsjf_business_value:    int            = 1
+    wsjf_time_criticality:  int            = 1
+    wsjf_risk_reduction:    int            = 1
+    wsjf_job_size:          int            = 1
 
 class BacklogItemUpdate(BaseModel):
-    feature_id:          Optional[int]  = None
-    sprint_id:           Optional[int]  = None
-    ado_id:              Optional[str]  = None
-    item_type_id:        Optional[int]  = None
-    title:               Optional[str]  = None
-    description:         Optional[str]  = None
-    current_status:      Optional[str]  = None
-    business_value:      Optional[str]  = None
-    acceptance_criteria: Optional[str]  = None
-    story_points:        Optional[int]  = None
-    priority:            Optional[int]  = None
-    completed_at:        Optional[datetime] = None
+    feature_id:             Optional[int]  = None
+    sprint_id:              Optional[int]  = None
+    ado_id:                 Optional[str]  = None
+    item_type_id:           Optional[int]  = None
+    title:                  Optional[str]  = None
+    description:            Optional[str]  = None
+    current_status:         Optional[str]  = None
+    business_value:         Optional[str]  = None
+    acceptance_criteria:    Optional[str]  = None
+    story_points:           Optional[int]  = None
+    priority:               Optional[int]  = None
+    completed_at:           Optional[datetime] = None
+    wsjf_business_value:    Optional[int]  = None
+    wsjf_time_criticality:  Optional[int]  = None
+    wsjf_risk_reduction:    Optional[int]  = None
+    wsjf_job_size:          Optional[int]  = None
 
 class BacklogItemOut(BaseModel):
-    item_id:             int
-    product_id:          Optional[int]  = None
-    feature_id:          Optional[int]  = None
-    sprint_id:           Optional[int]  = None
-    ado_id:              Optional[str]  = None
-    item_type_id:        Optional[int]  = None
-    title:               str
-    description:         Optional[str]  = None
-    current_status:      str
-    business_value:      Optional[str]  = None
-    acceptance_criteria: Optional[str]  = None
-    story_points:        Optional[int]  = None
-    priority:            int            = 3
-    created_at:          datetime
-    updated_at:          datetime
-    completed_at:        Optional[datetime] = None
+    item_id:                int
+    product_id:             Optional[int]  = None
+    feature_id:             Optional[int]  = None
+    sprint_id:              Optional[int]  = None
+    ado_id:                 Optional[str]  = None
+    item_type_id:           Optional[int]  = None
+    title:                  str
+    description:            Optional[str]  = None
+    current_status:         str
+    business_value:         Optional[str]  = None
+    acceptance_criteria:    Optional[str]  = None
+    story_points:           Optional[int]  = None
+    priority:               int            = 3
+    wsjf_business_value:    int            = 1
+    wsjf_time_criticality:  int            = 1
+    wsjf_risk_reduction:    int            = 1
+    wsjf_job_size:          int            = 1
+    wsjf_score:             int            = 0
+    created_at:             datetime
+    updated_at:             datetime
+    completed_at:           Optional[datetime] = None
     class Config: from_attributes = True
 
 class ItemTypeOut(BaseModel):
@@ -120,7 +139,12 @@ def list_items(
 
 @router.post("", response_model=BacklogItemOut, status_code=status.HTTP_201_CREATED)
 def create_item(body: BacklogItemCreate, db: Session = Depends(get_db)):
-    return BaseRepository(BacklogItem, db).create(body.model_dump())
+    data = body.model_dump()
+    data["wsjf_score"] = calc_wsjf(
+        data["wsjf_business_value"], data["wsjf_time_criticality"],
+        data["wsjf_risk_reduction"], data["wsjf_job_size"]
+    )
+    return BaseRepository(BacklogItem, db).create(data)
 
 
 @router.get("/{id}", response_model=BacklogItemOut)
@@ -131,7 +155,17 @@ def get_item(id: int, db: Session = Depends(get_db)):
 @router.patch("/{id}", response_model=BacklogItemOut)
 def update_item(id: int, body: BacklogItemUpdate, db: Session = Depends(get_db)):
     repo = BaseRepository(BacklogItem, db)
-    return repo.update(repo.get_or_404(id), body.model_dump(exclude_unset=True))
+    obj  = repo.get_or_404(id)
+    data = body.model_dump(exclude_unset=True)
+    # Recalculate WSJF score if any component changed
+    wsjf_fields = {"wsjf_business_value", "wsjf_time_criticality", "wsjf_risk_reduction", "wsjf_job_size"}
+    if wsjf_fields & set(data.keys()):
+        bv = data.get("wsjf_business_value",   obj.wsjf_business_value   or 1)
+        tc = data.get("wsjf_time_criticality", obj.wsjf_time_criticality or 1)
+        rr = data.get("wsjf_risk_reduction",   obj.wsjf_risk_reduction   or 1)
+        js = data.get("wsjf_job_size",         obj.wsjf_job_size         or 1)
+        data["wsjf_score"] = calc_wsjf(bv, tc, rr, js)
+    return repo.update(obj, data)
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
