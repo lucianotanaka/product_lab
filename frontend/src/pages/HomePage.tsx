@@ -500,6 +500,45 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── ABOUT ── */}
+      <section id="about" className="pl-about">
+        <div className="about-grid">
+          <div className="about-visual">
+            <div className="about-hex-container">
+              <div className="about-hex about-hex--1" />
+              <div className="about-hex about-hex--2" />
+              <div className="about-hex about-hex--3" />
+              <div className="about-flask-center"><FlaskLogo size={100} /></div>
+            </div>
+          </div>
+          <div className="about-content">
+            <span className="section-eyebrow">// BRIEFING DA MISSÃO //</span>
+            <h2 className="section-title">NOSSA <span className="section-title--accent">MISSÃO</span></h2>
+            <p className="about-text">
+              O Product Lab é o centro de operações estratégicas para equipes de produto que buscam excelência. Combinamos metodologias ágeis, análise de dados e frameworks de decisão para transformar visões em produtos que geram impacto real.
+            </p>
+            <p className="about-text">
+              Inspirado nos grandes laboratórios de inovação, nosso ambiente é desenhado para que Product Managers, Designers e Engenheiros colaborem com precisão cirúrgica — do discovery ao delivery.
+            </p>
+            <div className="about-pillars">
+              {[
+                { icon: "◈", title: "Knowledge", desc: "Frameworks e metodologias validadas" },
+                { icon: "◎", title: "Decisions", desc: "Estrutura para decisões de alto impacto" },
+                { icon: "◉", title: "Impact",    desc: "Métricas claras de resultado e valor" },
+              ].map(p => (
+                <div key={p.title} className="pillar">
+                  <span className="pillar__icon">{p.icon}</span>
+                  <div>
+                    <div className="pillar__title">{p.title}</div>
+                    <div className="pillar__desc">{p.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── COORDS ── */}
       <div className="contact-coords contact-coords--standalone">
         <span>LAT: -23.5505° S</span>
