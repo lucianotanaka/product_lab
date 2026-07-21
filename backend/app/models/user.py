@@ -14,3 +14,4 @@ class User(Base):
     user_reset_token_expires_at = Column(DateTime, nullable=True, default=None)
     created_at                 = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at                 = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    user_role                  = Column(String(20), nullable=False, default="user")

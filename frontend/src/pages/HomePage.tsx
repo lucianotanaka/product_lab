@@ -231,7 +231,7 @@ function ProductCockpit({ dashboard, onNavigate }: { dashboard: DashboardData; o
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function HomePage() {
-  const { user, logout }          = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const { productId, productName, setProduct, products } = useProduct();
   const navigate                  = useNavigate();
   const location                  = useLocation();
@@ -443,6 +443,29 @@ export default function HomePage() {
           <div className="section-header__line" />
         </div>
         <div className="modules-grid">
+          {/* ── Admin card: visível apenas para admins ── */}
+          {isAdmin && (
+            <div
+              className="module-card"
+              style={{ "--card-color": "#ff9900", cursor: "pointer" } as React.CSSProperties}
+              onClick={() => navigate("/admin/users")}
+            >
+              <div className="module-card__corner module-card__corner--tl" />
+              <div className="module-card__corner module-card__corner--br" />
+              <div className="module-card__header">
+                <span className="module-card__icon" style={{ color: "#ff9900" }}>⚙</span>
+                <span className="module-card__status module-card__status--ativo">
+                  <span className="module-card__status-dot" />ADMIN
+                </span>
+              </div>
+              <h3 className="module-card__title">Gestão de Usuários</h3>
+              <p className="module-card__desc">Criar, editar, ativar/desativar usuários e gerar tokens de reset de senha. Exclusivo para administradores.</p>
+              <div className="module-card__footer">
+                <div className="module-card__bar"><div className="module-card__bar-fill" style={{ background: "#ff9900" }} /></div>
+                <span className="module-card__link" style={{ color: "#ff9900" }}>ACESSAR ⟩</span>
+              </div>
+            </div>
+          )}
           {MODULES.map(mod => (
             <div key={mod.id} className="module-card" style={{ "--card-color": mod.color, cursor: "pointer" } as React.CSSProperties}
               onClick={() => navigate(MODULE_ROUTES[mod.id] ?? "/home")}>

@@ -7,6 +7,7 @@ export interface User {
   user_full_name: string;
   user_email: string;
   user_is_active: boolean;
+  user_role: "admin" | "user";
 }
 
 interface AuthState {
@@ -19,6 +20,7 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  isAdmin: boolean;
 }
 
 // ─── API base ─────────────────────────────────────────────────────────────────
@@ -34,6 +36,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
     isLoading: true,
   });
+
+  const isAdmin = state.user?.user_role === "admin";
 
   // Restore session from localStorage on mount
   useEffect(() => {
@@ -67,14 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: formData.toString(),
       });
     } catch (networkErr: unknown) {
-      // Network error — backend not reachable
       const msg = networkErr instanceof Error ? networkErr.message : String(networkErr);
       console.error("[Auth] Network error:", msg);
-      throw new Error(`Não foi possível conectar à API (${API}). Verifique se o backend está em execução.`);
+      throw new Error(
+        `Não foi possível conectar à API (${API}). Verifique se o backend está em execução.`
+      );
     }
 
     if (!res.ok) {
-      // Try to parse JSON error detail from FastAPI
       const raw = await res.text();
       console.error(`[Auth] HTTP ${res.status} ${res.statusText}:`, raw);
       let detail = `HTTP ${res.status}`;
@@ -103,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, logout, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

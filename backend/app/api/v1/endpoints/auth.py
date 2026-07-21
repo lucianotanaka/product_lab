@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from app.core.database import get_db
-from app.core.security import hash_password, verify_password, create_access_token, get_current_user
+from app.core.security import hash_password, verify_password, create_access_token, get_current_user, require_admin
 from app.models.user import User
 
 router = APIRouter()
@@ -32,6 +32,7 @@ class UserOut(BaseModel):
     user_full_name: str
     user_email: str
     user_is_active: bool
+    user_role: str
     created_at: datetime
     class Config: from_attributes = True
 
@@ -63,7 +64,7 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
                             headers={"WWW-Authenticate": "Bearer"})
     if not user.user_is_active:
         raise HTTPException(400, "Conta inativa")
-    token = create_access_token({"sub": user.user_email})
+    token = create_access_token({"sub": user.user_email, "role": user.user_role})
     return {"access_token": token, "token_type": "bearer", "user": user}
 
 @router.get("/me", response_model=UserOut, summary="Retorna o usuário autenticado")

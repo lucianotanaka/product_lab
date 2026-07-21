@@ -13,6 +13,7 @@ import StakeholdersPage from "./modules/stakeholders/pages/StakeholdersPage";
 import VPCPage from "./modules/vpc/pages/VPCPage";
 import BacklogPage from "./modules/backlog/pages/BacklogPage";
 import CommunicationPage from "./modules/communication/pages/CommunicationPage";
+import UsersPage from "./modules/users/pages/UsersPage";
 
 // ─── Protected Route ──────────────────────────────────────────────────────────
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,19 @@ function P({ component: Component }: { component: React.ComponentType }) {
   return <ProtectedRoute><Component /></ProtectedRoute>;
 }
 
+// ─── Admin-Only Route ─────────────────────────────────────────────────────────
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, isAdmin } = useAuth();
+  if (isLoading) return null;
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+  if (!isAdmin) return <Navigate to="/home" replace />;
+  return <>{children}</>;
+}
+
+function A({ component: Component }: { component: React.ComponentType }) {
+  return <AdminRoute><Component /></AdminRoute>;
+}
+
 // ─── App Router ───────────────────────────────────────────────────────────────
 function AppRoutes() {
   return (
@@ -56,6 +70,8 @@ function AppRoutes() {
       <Route path="/modules/vpc" element={<P component={VPCPage} />} />
       <Route path="/modules/backlog" element={<P component={BacklogPage} />} />
       <Route path="/modules/communication" element={<P component={CommunicationPage} />} />
+      {/* Admin-only */}
+      <Route path="/admin/users" element={<A component={UsersPage} />} />
       {/* Catch-all → login */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

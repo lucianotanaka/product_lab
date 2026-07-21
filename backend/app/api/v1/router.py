@@ -1,8 +1,9 @@
 from fastapi import APIRouter
-from .endpoints import auth, products, decisions, knowledge, prioritization, risks, roadmap, stakeholders, vpc, stats, backlog, communication
+from .endpoints import auth, products, decisions, knowledge, prioritization, risks, roadmap, stakeholders, vpc, stats, backlog, communication, users
 
 router = APIRouter()
 router.include_router(auth.router,            prefix="/auth",            tags=["Auth"])
+router.include_router(users.router,           prefix="/users",           tags=["Users (Admin)"])
 router.include_router(products.router,        prefix="/products",        tags=["Products"])
 router.include_router(decisions.router,       prefix="/decisions",       tags=["Decisions"])
 router.include_router(knowledge.router,       prefix="/knowledge",       tags=["Knowledge"])

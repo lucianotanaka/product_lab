@@ -49,3 +49,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if not user or not user.user_is_active:
         raise cred_exc
     return user
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Dependency que garante que o usuário autenticado tem role 'admin'."""
+    if current_user.user_role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a administradores",
+        )
+    return current_user
