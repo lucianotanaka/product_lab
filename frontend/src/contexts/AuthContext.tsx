@@ -11,6 +11,7 @@ export interface User {
   user_role: "admin" | "user";
   user_theme: "dark" | "light";
   user_language: "en" | "pt" | "es";
+  module_order: string[] | null;
 }
 
 interface AuthState {
@@ -25,6 +26,7 @@ interface AuthContextValue extends AuthState {
   logout: () => void;
   setTheme: (theme: "dark" | "light") => Promise<void>;
   setLanguage: (lang: "en" | "pt" | "es") => Promise<void>;
+  setModuleOrder: (order: string[]) => Promise<void>;
   isAdmin: boolean;
 }
 
@@ -45,6 +47,18 @@ function applyTheme(theme: "dark" | "light") {
 function applyLanguage(lang: "en" | "pt" | "es") {
   i18n.changeLanguage(lang);
   document.documentElement.setAttribute("lang", lang);
+}
+
+async function persistPreference(api: string, token: string, body: object) {
+  try {
+    await fetch(api, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.warn("[Auth] Falha ao persistir preferência:", err);
+  }
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -185,21 +199,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("pl_user", JSON.stringify(updatedUser));
       return { ...prev, user: updatedUser };
     });
-    try {
-      await fetch(`${API}/auth/me/language`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ user_language: lang }),
-      });
-    } catch (err) {
-      console.warn("[Auth] Falha ao persistir idioma:", err);
-    }
+    await persistPreference(`${API}/auth/me/language`, token, { user_language: lang });
+  };
+
+  // ── Set Module Order ──────────────────────────────────────────────────────
+  const setModuleOrder = async (order: string[]) => {
+    const token = localStorage.getItem("pl_token");
+    if (!token) return;
+    setState((prev) => {
+      if (!prev.user) return prev;
+      const updatedUser = { ...prev.user, module_order: order };
+      localStorage.setItem("pl_user", JSON.stringify(updatedUser));
+      return { ...prev, user: updatedUser };
+    });
+    await persistPreference(`${API}/auth/me/module_order`, token, { module_order: order });
   };
 
   const logout = () => doLogout();
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, setTheme, setLanguage, isAdmin }}>
+    <AuthContext.Provider value={{ ...state, login, logout, setTheme, setLanguage, setModuleOrder, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

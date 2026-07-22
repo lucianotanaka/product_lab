@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useAuth } from "../contexts/AuthContext";
 import { useProduct } from "../contexts/ProductContext";
 import { apiGet } from "../shared/services/api";
@@ -33,19 +37,23 @@ const MODULE_ROUTES: Record<string, string> = {
 
 interface Module { id: string; icon: string; status: "ATIVO" | "SYNC" | "STANDBY"; color: string; }
 
+// Default order: frequency of use (daily → strategic)
 const MODULES: Module[] = [
   { id: "dashboard",      icon: "⬡", status: "ATIVO",   color: "#00d4ff" },
-  { id: "knowledge",      icon: "◈", status: "ATIVO",   color: "#00e5cc" },
-  { id: "decisions",      icon: "◎", status: "ATIVO",   color: "#00ff88" },
+  { id: "backlog",        icon: "◫", status: "ATIVO",   color: "#ff9900" },
   { id: "roadmap",        icon: "⬢", status: "ATIVO",   color: "#00d4ff" },
   { id: "prioritization", icon: "◇", status: "SYNC",    color: "#00e5cc" },
   { id: "risks",          icon: "△", status: "ATIVO",   color: "#ff9900" },
+  { id: "decisions",      icon: "◎", status: "ATIVO",   color: "#00ff88" },
   { id: "stakeholders",   icon: "◉", status: "ATIVO",   color: "#00ff88" },
+  { id: "communication",  icon: "◈", status: "ATIVO",   color: "#c084fc" },
+  { id: "knowledge",      icon: "◈", status: "ATIVO",   color: "#00e5cc" },
   { id: "vpc",            icon: "⬡", status: "ATIVO",   color: "#00d4ff" },
   { id: "research",       icon: "◈", status: "STANDBY", color: "#c084fc" },
-  { id: "backlog",        icon: "◫", status: "ATIVO",   color: "#ff9900" },
-  { id: "communication",  icon: "◈", status: "ATIVO",   color: "#c084fc" },
 ];
+
+const DEFAULT_MODULE_ORDER = MODULES.map(m => m.id);
+const MODULE_MAP = Object.fromEntries(MODULES.map(m => [m.id, m]));
 
 const SEV_COLOR: Record<string, string> = { HIGH: "#ff6b6b", MEDIUM: "#ff9900", LOW: "#00ff88" };
 const TYPE_ICON: Record<string, string> = { RISK: "△", BACKLOG: "◫", PUBLICATION: "◈", DECISION: "◎" };
@@ -127,6 +135,66 @@ function FlaskLogo({ size = 64 }: { size?: number }) {
     </svg>
   );
 }
+
+// ─── Sortable Module Card ─────────────────────────────────────────────────────
+function SortableModuleCard({ mod, onNavigate, statusKey, t }: {
+  mod: Module;
+  onNavigate: (path: string) => void;
+  statusKey: (s: string) => string;
+  t: (key: string) => string;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: mod.id });
+
+  // Suppress click that fires after a drag ends (isDragging resets before pointerup click)
+  const wasDragging = useRef(false);
+  useEffect(() => {
+    if (isDragging) {
+      wasDragging.current = true;
+    } else if (wasDragging.current) {
+      // Give a tick for the click event to be ignored, then reset
+      const id = setTimeout(() => { wasDragging.current = false; }, 150);
+      return () => clearTimeout(id);
+    }
+  }, [isDragging]);
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.75 : 1,
+    zIndex: isDragging ? 999 : undefined,
+    cursor: isDragging ? "grabbing" : undefined,
+    "--card-color": mod.color,
+  } as React.CSSProperties;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`module-card${isDragging ? " module-card--dragging" : ""}`}
+      onClick={() => { if (!wasDragging.current) onNavigate(MODULE_ROUTES[mod.id] ?? "/home"); }}
+      {...attributes}
+      {...listeners}
+    >
+      {/* Visual drag indicator — decorative only, no event handlers */}
+      <div className="module-card__drag" aria-hidden="true">⠿</div>
+      <div className="module-card__corner module-card__corner--tl" />
+      <div className="module-card__corner module-card__corner--br" />
+      <div className="module-card__header">
+        <span className="module-card__icon" style={{ color: mod.color }}>{mod.icon}</span>
+        <span className={`module-card__status module-card__status--${mod.status.toLowerCase()}`}>
+          <span className="module-card__status-dot" />{statusKey(mod.status)}
+        </span>
+      </div>
+      <h3 className="module-card__title">{t(`modules_section.modules.${mod.id}.title`)}</h3>
+      <p className="module-card__desc">{t(`modules_section.modules.${mod.id}.desc`)}</p>
+      <div className="module-card__footer">
+        <div className="module-card__bar"><div className="module-card__bar-fill" style={{ background: mod.color }} /></div>
+        <span className="module-card__link" style={{ color: mod.color }}>{t("modules_section.access")}</span>
+      </div>
+    </div>
+  );
+}
+
 
 // ─── Product Cockpit ──────────────────────────────────────────────────────────
 function ProductCockpit({ dashboard, onNavigate }: { dashboard: DashboardData; onNavigate: (path: string) => void }) {
@@ -236,6 +304,43 @@ export default function HomePage() {
     setProduct(id, p?.name ?? "");
   };
 
+  // ── Module order state (DnD) ───────────────────────────────────────────────
+  const { setModuleOrder } = useAuth();
+  const [moduleOrder, setModuleOrderLocal] = useState<string[]>([]);
+
+  useEffect(() => {
+    const saved = user?.module_order;
+    if (saved && saved.length > 0) {
+      // Merge: keep saved order, append any new modules not yet in it
+      const merged = [
+        ...saved.filter(id => MODULE_MAP[id]),
+        ...DEFAULT_MODULE_ORDER.filter(id => !saved.includes(id)),
+      ];
+      setModuleOrderLocal(merged);
+    } else {
+      setModuleOrderLocal(DEFAULT_MODULE_ORDER);
+    }
+  }, [user?.module_order]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = moduleOrder.indexOf(active.id as string);
+      const newIndex = moduleOrder.indexOf(over.id as string);
+      const newOrder = arrayMove(moduleOrder, oldIndex, newIndex);
+      setModuleOrderLocal(newOrder);
+      setModuleOrder(newOrder);
+    }
+  };
+
+  const sortedModules = moduleOrder
+    .filter(id => MODULE_MAP[id])
+    .map(id => MODULE_MAP[id]);
+
   // Map module status to i18n key
   const statusKey = (s: string) => {
     if (s === "ATIVO") return t("modules_section.status_active");
@@ -264,6 +369,17 @@ export default function HomePage() {
             {([["hero", t("nav.home")], ["cockpit", t("nav.cockpit")], ["modules", t("nav.modules")], ["stats", t("nav.data")]] as [string,string][]).map(([id, label]) => (
               <li key={id}><button className="pl-nav__link" onClick={() => scrollTo(id)}>{label}</button></li>
             ))}
+            {isAdmin && (
+              <li>
+                <button
+                  className="pl-nav__link"
+                  style={{ color: "rgba(255,153,0,0.7)" }}
+                  onClick={() => scrollTo("admin")}
+                >
+                  {t("nav.admin")}
+                </button>
+              </li>
+            )}
           </ul>
           <div className="pl-nav__user">
             <span className="pl-nav__user-dot" />
@@ -383,41 +499,61 @@ export default function HomePage() {
           </div>
           <div className="section-header__line" />
         </div>
-        <div className="modules-grid">
-          {isAdmin && (
-            <div className="module-card" style={{ "--card-color": "#ff9900", cursor: "pointer" } as React.CSSProperties} onClick={() => navigate("/admin/users")}>
-              <div className="module-card__corner module-card__corner--tl" /><div className="module-card__corner module-card__corner--br" />
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={moduleOrder} strategy={rectSortingStrategy}>
+            <div className="modules-grid">
+              {/* Sortable module cards */}
+              {sortedModules.map(mod => (
+                <SortableModuleCard
+                  key={mod.id}
+                  mod={mod}
+                  onNavigate={(path) => navigate(path)}
+                  statusKey={statusKey}
+                  t={t}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      </section>
+
+      {/* ── ADMIN SECTION (admins only) ── */}
+      {isAdmin && (
+        <section id="admin" className="pl-modules pl-admin">
+          <div className="section-header">
+            <div className="section-header__line" style={{ background: "linear-gradient(90deg, transparent, rgba(255,153,0,0.3), transparent)" }} />
+            <div className="section-header__content">
+              <span className="section-eyebrow" style={{ color: "rgba(255,153,0,0.7)" }}>{t("admin_section.eyebrow")}</span>
+              <h2 className="section-title">
+                {t("admin_section.heading")} <span style={{ background: "linear-gradient(135deg,#ff9900,#ffcc44)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>{t("admin_section.heading_accent")}</span>
+              </h2>
+            </div>
+            <div className="section-header__line" style={{ background: "linear-gradient(90deg, transparent, rgba(255,153,0,0.3), transparent)" }} />
+          </div>
+          <div className="modules-grid">
+            <div
+              className="module-card"
+              style={{ "--card-color": "#ff9900", cursor: "pointer" } as React.CSSProperties}
+              onClick={() => navigate("/admin/users")}
+            >
+              <div className="module-card__corner module-card__corner--tl" />
+              <div className="module-card__corner module-card__corner--br" />
               <div className="module-card__header">
                 <span className="module-card__icon" style={{ color: "#ff9900" }}>⚙</span>
-                <span className="module-card__status module-card__status--ativo"><span className="module-card__status-dot" />{t("modules_section.admin_badge")}</span>
+                <span className="module-card__status module-card__status--sync">
+                  <span className="module-card__status-dot" />ADMIN
+                </span>
               </div>
-              <h3 className="module-card__title">{t("modules_section.modules.users.title")}</h3>
-              <p className="module-card__desc">{t("modules_section.modules.users.desc")}</p>
+              <h3 className="module-card__title">{t("admin_section.users_title")}</h3>
+              <p className="module-card__desc">{t("admin_section.users_desc")}</p>
               <div className="module-card__footer">
                 <div className="module-card__bar"><div className="module-card__bar-fill" style={{ background: "#ff9900" }} /></div>
                 <span className="module-card__link" style={{ color: "#ff9900" }}>{t("modules_section.access")}</span>
               </div>
             </div>
-          )}
-          {MODULES.map(mod => (
-            <div key={mod.id} className="module-card" style={{ "--card-color": mod.color, cursor: "pointer" } as React.CSSProperties} onClick={() => navigate(MODULE_ROUTES[mod.id] ?? "/home")}>
-              <div className="module-card__corner module-card__corner--tl" /><div className="module-card__corner module-card__corner--br" />
-              <div className="module-card__header">
-                <span className="module-card__icon" style={{ color: mod.color }}>{mod.icon}</span>
-                <span className={`module-card__status module-card__status--${mod.status.toLowerCase()}`}>
-                  <span className="module-card__status-dot" />{statusKey(mod.status)}
-                </span>
-              </div>
-              <h3 className="module-card__title">{t(`modules_section.modules.${mod.id}.title`)}</h3>
-              <p className="module-card__desc">{t(`modules_section.modules.${mod.id}.desc`)}</p>
-              <div className="module-card__footer">
-                <div className="module-card__bar"><div className="module-card__bar-fill" style={{ background: mod.color }} /></div>
-                <span className="module-card__link" style={{ color: mod.color }}>{t("modules_section.access")}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {/* ── STATS ── */}
       <section id="stats" className="pl-stats">

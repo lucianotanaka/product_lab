@@ -7,7 +7,8 @@
     "logout": "⏻ SALIR",
     "product_label": "PRODUCTO:",
     "all_products": "— TODOS —",
-    "back_home": "⟨ INICIO"
+    "back_home": "⟨ INICIO",
+    "admin": "ADMIN"
   },
   "hero": {
     "badge": "// SISTEMA OPERATIVO {{version}} — PROTOCOLO INICIADO //",
@@ -161,6 +162,13 @@
     "err_edit": "Error al editar",
     "err_gen_token": "Error al generar token",
     "err_revoke": "Error al revocar"
+  },
+  "admin_section": {
+    "eyebrow": "// ADMINISTRACIÓN DEL SISTEMA //",
+    "heading": "ADMINISTRACIÓN",
+    "heading_accent": "DEL SISTEMA",
+    "users_title": "Gestión de Usuarios",
+    "users_desc": "Crear, editar, activar/desactivar usuarios y generar tokens de reset de contraseña. Solo administradores."
   },
   "common": {
     "logout": "⏻ SALIR",

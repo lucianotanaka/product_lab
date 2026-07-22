@@ -17,6 +17,7 @@ def run_migrations():
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS user_reset_token_expires_at TIMESTAMP"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS user_theme VARCHAR(10) NOT NULL DEFAULT 'dark'"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS user_language VARCHAR(10) NOT NULL DEFAULT 'en'"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS module_order JSONB DEFAULT NULL"))
 
         # products
         conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS tags TEXT[]"))

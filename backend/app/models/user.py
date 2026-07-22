@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, JSON
 from app.core.database import Base
 
 class User(Base):
@@ -17,3 +17,4 @@ class User(Base):
     user_role                  = Column(String(20), nullable=False, default="user")
     user_theme                 = Column(String(10), nullable=False, default="dark")
     user_language              = Column(String(10), nullable=False, default="en")
+    module_order               = Column(JSON, nullable=True, default=None)

@@ -7,7 +7,8 @@
     "logout": "⏻ LOGOUT",
     "product_label": "PRODUCT:",
     "all_products": "— ALL —",
-    "back_home": "⟨ HOME"
+    "back_home": "⟨ HOME",
+    "admin": "ADMIN"
   },
   "hero": {
     "badge": "// OPERATING SYSTEM {{version}} — PROTOCOL INITIATED //",
@@ -161,6 +162,13 @@
     "err_edit": "Error editing user",
     "err_gen_token": "Error generating token",
     "err_revoke": "Error revoking token"
+  },
+  "admin_section": {
+    "eyebrow": "// SYSTEM ADMINISTRATION //",
+    "heading": "SYSTEM",
+    "heading_accent": "ADMINISTRATION",
+    "users_title": "User Management",
+    "users_desc": "Create, edit, activate/deactivate users and generate password reset tokens. Admin only."
   },
   "common": {
     "logout": "⏻ LOGOUT",

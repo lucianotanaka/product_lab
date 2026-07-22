@@ -1,6 +1,7 @@
 import secrets
 import string
 from datetime import datetime, timedelta
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -35,6 +36,7 @@ class UserOut(BaseModel):
     user_role: str
     user_theme: str = "dark"
     user_language: str = "en"
+    module_order: Optional[List[str]] = None
     created_at: datetime
     class Config: from_attributes = True
 
@@ -71,6 +73,21 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
 
 @router.get("/me", response_model=UserOut, summary="Retorna o usuário autenticado")
 def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+class ModuleOrderUpdate(BaseModel):
+    module_order: List[str]
+
+@router.patch("/me/module_order", response_model=UserOut, summary="Salvar ordem dos módulos do usuário autenticado")
+def update_module_order(
+    body: ModuleOrderUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    current_user.module_order = body.module_order
+    current_user.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 class LanguageUpdate(BaseModel):
