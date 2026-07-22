@@ -11,7 +11,7 @@ from app.models.user import User
 
 SECRET_KEY  = os.getenv("SECRET_KEY", "product-lab-secret-key-2026")
 ALGORITHM   = "HS256"
-TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+TOKEN_EXPIRE_MINUTES = 60 * 2  # 2 hours (inactivity logout handles the rest)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 

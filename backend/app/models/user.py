@@ -15,3 +15,5 @@ class User(Base):
     created_at                 = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at                 = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_role                  = Column(String(20), nullable=False, default="user")
+    user_theme                 = Column(String(10), nullable=False, default="dark")
+    user_language              = Column(String(10), nullable=False, default="en")

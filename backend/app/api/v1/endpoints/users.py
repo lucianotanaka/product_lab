@@ -8,7 +8,7 @@ import string
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -47,14 +47,14 @@ class UserAdminOut(BaseModel):
 
 class UserCreateBody(BaseModel):
     user_full_name: str
-    user_email: EmailStr
+    user_email: str
     password: str
     user_role: str = "user"
 
 
 class UserUpdateBody(BaseModel):
     user_full_name: Optional[str] = None
-    user_email: Optional[EmailStr] = None
+    user_email: Optional[str] = None
     user_role: Optional[str] = None
     user_is_active: Optional[bool] = None
     new_password: Optional[str] = None

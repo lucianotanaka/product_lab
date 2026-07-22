@@ -18,6 +18,11 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+[data-theme="light"] body {
+  background: #F7F7F8;
+  color: #1a2a3a;
+}
+
 #root {
   display: block;
   text-align: left;

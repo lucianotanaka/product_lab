@@ -1,88 +1,52 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { useProduct } from "../contexts/ProductContext";
 import { apiGet } from "../shared/services/api";
+import ThemeToggle from "../shared/components/ThemeToggle";
+import LanguageSelector from "../shared/components/LanguageSelector";
 import "../styles/hud.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
 interface DashboardData {
   product: { product_id: number; name: string; status: string; description?: string };
   metrics: {
-    open_risks: number;
-    high_risks: number;
-    backlog_open: number;
-    backlog_total: number;
-    decisions_recent: number;
-    stakeholders: number;
-    roadmap_upcoming: number;
-    publications_review: number;
+    open_risks: number; high_risks: number; backlog_open: number; backlog_total: number;
+    decisions_recent: number; stakeholders: number; roadmap_upcoming: number; publications_review: number;
   };
-  attention: Array<{
-    type: string;
-    severity: string;
-    title: string;
-    detail: string;
-    link: string;
-  }>;
+  attention: Array<{ type: string; severity: string; title: string; detail: string; link: string }>;
 }
 
 interface SystemStats {
-  products: number;
-  decisions: number;
-  knowledge_items: number;
-  risks: number;
-  roadmap_items: number;
-  prioritization_items: number;
-  stakeholders: number;
-  vpc_items: number;
-  backlog_items: number;
-  product_impacts: number;
-  product_features: number;
-  users: number;
-  communications: number;
+  products: number; decisions: number; knowledge_items: number; risks: number;
+  roadmap_items: number; prioritization_items: number; stakeholders: number; vpc_items: number;
+  backlog_items: number; product_impacts: number; product_features: number; users: number; communications: number;
 }
 
-// ─── Module route map ─────────────────────────────────────────────────────────
 const MODULE_ROUTES: Record<string, string> = {
-  dashboard:     "/modules/products",
-  knowledge:     "/modules/knowledge",
-  decisions:     "/modules/decisions",
-  roadmap:       "/modules/roadmap",
-  prioritization:"/modules/prioritization",
-  risks:         "/modules/risks",
-  stakeholders:  "/modules/stakeholders",
-  vpc:           "/modules/vpc",
-  backlog:       "/modules/backlog",
-  research:      "/modules/knowledge",
-  communication: "/modules/communication",
+  dashboard: "/modules/products", knowledge: "/modules/knowledge", decisions: "/modules/decisions",
+  roadmap: "/modules/roadmap", prioritization: "/modules/prioritization", risks: "/modules/risks",
+  stakeholders: "/modules/stakeholders", vpc: "/modules/vpc", backlog: "/modules/backlog",
+  research: "/modules/knowledge", communication: "/modules/communication",
 };
 
-interface Module {
-  id: string;
-  icon: string;
-  title: string;
-  description: string;
-  status: "ATIVO" | "SYNC" | "STANDBY";
-  color: string;
-}
+interface Module { id: string; icon: string; status: "ATIVO" | "SYNC" | "STANDBY"; color: string; }
 
 const MODULES: Module[] = [
-  { id: "dashboard",     icon: "⬡", title: "Dashboard",      description: "Visão unificada de métricas, KPIs e indicadores estratégicos em tempo real.", status: "ATIVO",   color: "#00d4ff" },
-  { id: "knowledge",     icon: "◈", title: "Knowledge Base",  description: "Base de conhecimento centralizada com frameworks, templates e melhores práticas.", status: "ATIVO", color: "#00e5cc" },
-  { id: "decisions",     icon: "◎", title: "Decisions",       description: "Registro estruturado de decisões estratégicas com contexto, alternativas e resultados.", status: "ATIVO", color: "#00ff88" },
-  { id: "roadmap",       icon: "⬢", title: "Roadmap",         description: "Planejamento visual de iniciativas, epics e marcos com alinhamento estratégico.", status: "ATIVO",  color: "#00d4ff" },
-  { id: "prioritization",icon: "◇", title: "Prioritization",  description: "Frameworks de priorização (RICE, ICE, MoSCoW) para maximizar impacto nos resultados.", status: "SYNC", color: "#00e5cc" },
-  { id: "risks",         icon: "△", title: "Risk Matrix",     description: "Mapeamento e monitoramento de riscos com planos de mitigação estratégica.", status: "ATIVO",      color: "#ff9900" },
-  { id: "stakeholders",  icon: "◉", title: "Stakeholders",    description: "Gestão de partes interessadas com mapeamento de influência e comunicação.", status: "ATIVO",      color: "#00ff88" },
-  { id: "vpc",           icon: "⬡", title: "Value Canvas",    description: "Canvas de proposta de valor com análise de jobs, pains e gains do cliente.", status: "ATIVO",     color: "#00d4ff" },
-  { id: "research",      icon: "◈", title: "Research Lab",    description: "Repositório de pesquisas, experimentos e insights validados com usuários reais.", status: "STANDBY", color: "#c084fc" },
-  { id: "backlog",       icon: "◫", title: "Backlog",         description: "Gestão de user stories, tasks, bugs e epics com story points e critérios de aceite.", status: "ATIVO", color: "#ff9900" },
-  { id: "communication", icon: "◈", title: "Comunicação",     description: "Gestão de comunicações, anúncios, newsletters e atualizações de status para stakeholders.", status: "ATIVO", color: "#c084fc" },
+  { id: "dashboard",      icon: "⬡", status: "ATIVO",   color: "#00d4ff" },
+  { id: "knowledge",      icon: "◈", status: "ATIVO",   color: "#00e5cc" },
+  { id: "decisions",      icon: "◎", status: "ATIVO",   color: "#00ff88" },
+  { id: "roadmap",        icon: "⬢", status: "ATIVO",   color: "#00d4ff" },
+  { id: "prioritization", icon: "◇", status: "SYNC",    color: "#00e5cc" },
+  { id: "risks",          icon: "△", status: "ATIVO",   color: "#ff9900" },
+  { id: "stakeholders",   icon: "◉", status: "ATIVO",   color: "#00ff88" },
+  { id: "vpc",            icon: "⬡", status: "ATIVO",   color: "#00d4ff" },
+  { id: "research",       icon: "◈", status: "STANDBY", color: "#c084fc" },
+  { id: "backlog",        icon: "◫", status: "ATIVO",   color: "#ff9900" },
+  { id: "communication",  icon: "◈", status: "ATIVO",   color: "#c084fc" },
 ];
 
-// ─── Severity colors ──────────────────────────────────────────────────────────
 const SEV_COLOR: Record<string, string> = { HIGH: "#ff6b6b", MEDIUM: "#ff9900", LOW: "#00ff88" };
 const TYPE_ICON: Record<string, string> = { RISK: "△", BACKLOG: "◫", PUBLICATION: "◈", DECISION: "◎" };
 
@@ -166,31 +130,29 @@ function FlaskLogo({ size = 64 }: { size?: number }) {
 
 // ─── Product Cockpit ──────────────────────────────────────────────────────────
 function ProductCockpit({ dashboard, onNavigate }: { dashboard: DashboardData; onNavigate: (path: string) => void }) {
+  const { t } = useTranslation();
   const { product, metrics, attention } = dashboard;
 
   const metricCards = [
-    { label: "Riscos Abertos",     value: metrics.open_risks,        color: metrics.high_risks > 0 ? "#ff6b6b" : "#00ff88", icon: "△", link: "/modules/risks" },
-    { label: "Riscos Alto",        value: metrics.high_risks,        color: metrics.high_risks > 0 ? "#ff6b6b" : "#7899b0", icon: "⚠", link: "/modules/risks" },
-    { label: "Backlog Aberto",     value: metrics.backlog_open,      color: "#ff9900", icon: "◫", link: "/modules/backlog" },
-    { label: "Decisões (30d)",     value: metrics.decisions_recent,  color: "#00ff88", icon: "◎", link: "/modules/decisions" },
-    { label: "Roadmap Próximos",   value: metrics.roadmap_upcoming,  color: "#00d4ff", icon: "⬢", link: "/modules/roadmap" },
-    { label: "Pub. p/ Aprovar",    value: metrics.publications_review, color: metrics.publications_review > 0 ? "#ff9900" : "#7899b0", icon: "◈", link: "/modules/communication" },
-    { label: "Stakeholders",       value: metrics.stakeholders,      color: "#00e5cc", icon: "◉", link: "/modules/stakeholders" },
+    { label: t("cockpit.metric_open_risks"),    value: metrics.open_risks,          color: metrics.high_risks > 0 ? "#ff6b6b" : "#00ff88", icon: "△", link: "/modules/risks" },
+    { label: t("cockpit.metric_high_risks"),    value: metrics.high_risks,          color: metrics.high_risks > 0 ? "#ff6b6b" : "#7899b0", icon: "⚠", link: "/modules/risks" },
+    { label: t("cockpit.metric_backlog"),        value: metrics.backlog_open,        color: "#ff9900", icon: "◫", link: "/modules/backlog" },
+    { label: t("cockpit.metric_decisions"),      value: metrics.decisions_recent,    color: "#00ff88", icon: "◎", link: "/modules/decisions" },
+    { label: t("cockpit.metric_roadmap"),        value: metrics.roadmap_upcoming,    color: "#00d4ff", icon: "⬢", link: "/modules/roadmap" },
+    { label: t("cockpit.metric_publications"),   value: metrics.publications_review, color: metrics.publications_review > 0 ? "#ff9900" : "#7899b0", icon: "◈", link: "/modules/communication" },
+    { label: t("cockpit.metric_stakeholders"),   value: metrics.stakeholders,        color: "#00e5cc", icon: "◉", link: "/modules/stakeholders" },
   ];
 
   return (
     <section id="cockpit" className="pl-cockpit">
-      {/* Product header */}
       <div className="cockpit-header">
         <div className="cockpit-header__left">
-          <span className="section-eyebrow">// PRODUTO ATIVO //</span>
+          <span className="section-eyebrow">{t("cockpit.active_product")}</span>
           <h2 className="cockpit-product-name">{product.name}</h2>
           {product.description && <p className="cockpit-product-desc">{product.description.slice(0, 100)}{product.description.length > 100 ? "…" : ""}</p>}
         </div>
         <span className={`cockpit-status cockpit-status--${product.status}`}>{product.status.toUpperCase()}</span>
       </div>
-
-      {/* Metric cards */}
       <div className="cockpit-metrics">
         {metricCards.map(m => (
           <button key={m.label} className="cockpit-metric" onClick={() => onNavigate(m.link)} style={{ "--metric-color": m.color } as React.CSSProperties}>
@@ -200,20 +162,16 @@ function ProductCockpit({ dashboard, onNavigate }: { dashboard: DashboardData; o
           </button>
         ))}
       </div>
-
-      {/* Attention items */}
       {attention.length > 0 && (
         <div className="cockpit-attention">
           <div className="cockpit-attention__header">
-            <span className="section-eyebrow">// PRECISA DE ATENÇÃO //</span>
+            <span className="section-eyebrow">{t("cockpit.needs_attention")}</span>
           </div>
           <div className="cockpit-attention__list">
             {attention.map((item, i) => (
               <button key={i} className="attention-item" onClick={() => onNavigate(item.link)}
                 style={{ "--att-color": SEV_COLOR[item.severity] ?? "#7899b0" } as React.CSSProperties}>
-                <span className="attention-item__icon" style={{ color: SEV_COLOR[item.severity] }}>
-                  {TYPE_ICON[item.type] ?? "◆"}
-                </span>
+                <span className="attention-item__icon" style={{ color: SEV_COLOR[item.severity] }}>{TYPE_ICON[item.type] ?? "◆"}</span>
                 <div className="attention-item__body">
                   <span className="attention-item__type" style={{ color: SEV_COLOR[item.severity] }}>{item.type}</span>
                   <span className="attention-item__title">{item.title}</span>
@@ -231,35 +189,29 @@ function ProductCockpit({ dashboard, onNavigate }: { dashboard: DashboardData; o
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function HomePage() {
+  const { t } = useTranslation();
   const { user, logout, isAdmin } = useAuth();
   const { productId, productName, setProduct, products } = useProduct();
-  const navigate                  = useNavigate();
-  const location                  = useLocation();
+  const navigate    = useNavigate();
+  const location    = useLocation();
   const [time, setTime]           = useState("");
   const [navScrolled, setNavScrolled] = useState(false);
   const [stats, setStats]         = useState<SystemStats | null>(null);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [dashLoading, setDashLoading] = useState(false);
 
-  // Load global stats
-  useEffect(() => {
-    apiGet<SystemStats>("/stats").then(setStats).catch(() => {});
-  }, []);
+  useEffect(() => { apiGet<SystemStats>("/stats").then(setStats).catch(() => {}); }, []);
 
-  // Load product dashboard whenever product changes
   const loadDashboard = useCallback(async (pid: string) => {
     if (!pid) { setDashboard(null); return; }
     setDashLoading(true);
-    try {
-      const d = await apiGet<DashboardData>(`/products/${pid}/dashboard`);
-      setDashboard(d);
-    } catch { setDashboard(null); }
+    try { const d = await apiGet<DashboardData>(`/products/${pid}/dashboard`); setDashboard(d); }
+    catch { setDashboard(null); }
     finally { setDashLoading(false); }
   }, []);
 
   useEffect(() => { loadDashboard(productId); }, [productId]);
 
-  // Scroll to section on return from module
   useEffect(() => {
     const target = (location.state as { scrollTo?: string } | null)?.scrollTo;
     if (target) { const el = document.getElementById(target); if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 80); }
@@ -277,15 +229,19 @@ export default function HomePage() {
 
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   const handleLogout = () => { logout(); navigate("/", { replace: true }); };
-  const firstName = user?.user_full_name?.split(" ")[0] ?? "Usuário";
-
+  const firstName = user?.user_full_name?.split(" ")[0] ?? "User";
   const handleProductChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
     const p  = products.find(p => String(p.product_id) === id);
     setProduct(id, p?.name ?? "");
   };
 
-  const goModule = (path: string) => navigate(path);
+  // Map module status to i18n key
+  const statusKey = (s: string) => {
+    if (s === "ATIVO") return t("modules_section.status_active");
+    if (s === "SYNC")  return t("modules_section.status_sync");
+    return t("modules_section.status_standby");
+  };
 
   return (
     <div className="pl-root">
@@ -305,7 +261,7 @@ export default function HomePage() {
             </span>
           </button>
           <ul className="pl-nav__links">
-            {[["hero","INÍCIO"],["cockpit","COCKPIT"],["modules","MÓDULOS"],["stats","DADOS"]].map(([id, label]) => (
+            {([["hero", t("nav.home")], ["cockpit", t("nav.cockpit")], ["modules", t("nav.modules")], ["stats", t("nav.data")]] as [string,string][]).map(([id, label]) => (
               <li key={id}><button className="pl-nav__link" onClick={() => scrollTo(id)}>{label}</button></li>
             ))}
           </ul>
@@ -313,7 +269,9 @@ export default function HomePage() {
             <span className="pl-nav__user-dot" />
             <span className="pl-nav__user-name">{firstName.toUpperCase()}</span>
           </div>
-          <button className="pl-nav__logout" onClick={handleLogout} title="Encerrar sessão">⏻ SAIR</button>
+          <LanguageSelector variant="hud" />
+          <ThemeToggle variant="hud" />
+          <button className="pl-nav__logout" onClick={handleLogout} title={t("common.logout")}>{t("common.logout")}</button>
           <div className="pl-nav__clock">{time}</div>
         </div>
       </nav>
@@ -326,69 +284,54 @@ export default function HomePage() {
           <div className="reactor-core"><FlaskLogo size={120} /></div>
           <div className="reactor-glow" />
         </div>
-
         <div className="pl-hero__content">
           <div className="hero-badge">
             <span className="hero-badge__dot" />
-            <span className="hero-badge__text">// SISTEMA OPERACIONAL {import.meta.env.VITE_APP_VERSION ?? "dev"} — PROTOCOLO INICIADO //</span>
+            <span className="hero-badge__text">{t("hero.badge", { version: import.meta.env.VITE_APP_VERSION ?? "dev" })}</span>
           </div>
           <h1 className="hero-title">
             <span className="hero-title__product">PRODUCT</span>
             <span className="hero-title__lab">LAB</span>
           </h1>
-
-          {/* ── PRODUCT SELECTOR — central CTA ── */}
           <div className="hero-product-selector">
-            <span className="hero-product-selector__label">PRODUTO ATIVO</span>
-            <select
-              className="hero-product-selector__select"
-              value={productId}
-              onChange={handleProductChange}
-            >
-              <option value="">— Selecione um produto —</option>
-              {products.map(p => (
-                <option key={p.product_id} value={String(p.product_id)}>{p.name}</option>
-              ))}
+            <span className="hero-product-selector__label">{t("hero.active_product")}</span>
+            <select className="hero-product-selector__select" value={productId} onChange={handleProductChange}>
+              <option value="">{t("hero.select_product")}</option>
+              {products.map(p => <option key={p.product_id} value={String(p.product_id)}>{p.name}</option>)}
             </select>
             {productName && (
               <span className="hero-product-selector__active">
-                <span className="hero-product-selector__dot" />
-                {productName}
+                <span className="hero-product-selector__dot" />{productName}
               </span>
             )}
           </div>
-
           <div className="hero-divider">
             <div className="hero-divider__line" />
             <div className="hero-divider__text">
-              <span>KNOWLEDGE</span><span className="hero-divider__gem">◆</span>
-              <span>DECISIONS</span><span className="hero-divider__gem">◆</span>
-              <span>IMPACT</span>
+              <span>{t("hero.divider_knowledge")}</span><span className="hero-divider__gem">◆</span>
+              <span>{t("hero.divider_decisions")}</span><span className="hero-divider__gem">◆</span>
+              <span>{t("hero.divider_impact")}</span>
             </div>
             <div className="hero-divider__line" />
           </div>
-
           <div className="hero-actions">
             {productId ? (
               <button className="btn-primary" onClick={() => scrollTo("cockpit")}>
-                <span className="btn-primary__glow" />
-                VER COCKPIT <span className="btn-primary__arrow">⟩</span>
+                <span className="btn-primary__glow" />{t("hero.view_cockpit")} <span className="btn-primary__arrow">⟩</span>
               </button>
             ) : (
               <button className="btn-primary" onClick={() => scrollTo("modules")}>
-                <span className="btn-primary__glow" />
-                EXPLORAR MÓDULOS <span className="btn-primary__arrow">⟩</span>
+                <span className="btn-primary__glow" />{t("hero.explore_modules")} <span className="btn-primary__arrow">⟩</span>
               </button>
             )}
-            <button className="btn-secondary" onClick={() => scrollTo("modules")}>MÓDULOS</button>
+            <button className="btn-secondary" onClick={() => scrollTo("modules")}>{t("hero.modules_btn")}</button>
           </div>
-
           <div className="hero-telemetry">
             {[
-              { label: "STATUS",   value: "ATIVO",  active: true },
-              { label: "PRODUTO",  value: productName ? productName.slice(0, 12) + (productName.length > 12 ? "…" : "") : "—" },
-              { label: "MÓDULOS",  value: "10" },
-              { label: "UPTIME",   value: "99.8%" },
+              { label: t("telemetry.status"),   value: t("telemetry.active"), active: true },
+              { label: t("telemetry.products"), value: String(stats?.products ?? 0) },
+              { label: t("telemetry.modules"),  value: "10" },
+              { label: t("telemetry.uptime"),   value: "99.8%" },
             ].map((item, i) => (
               <div key={i} className="telemetry-item">
                 {i > 0 && <span className="telemetry-sep">|</span>}
@@ -400,19 +343,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── COCKPIT (product-centric) ── */}
+      {/* ── COCKPIT ── */}
       {productId && (
         dashLoading ? (
           <section id="cockpit" className="pl-cockpit pl-cockpit--loading">
             <div className="section-header">
               <div className="section-header__content">
-                <span className="section-eyebrow">// CARREGANDO COCKPIT //</span>
-                <div className="mod-loading" style={{ marginTop: 16 }}>SINCRONIZANDO DADOS DO PRODUTO...</div>
+                <span className="section-eyebrow">{t("cockpit.loading")}</span>
+                <div className="mod-loading" style={{ marginTop: 16 }}>{t("cockpit.syncing")}</div>
               </div>
             </div>
           </section>
         ) : dashboard ? (
-          <ProductCockpit dashboard={dashboard} onNavigate={goModule} />
+          <ProductCockpit dashboard={dashboard} onNavigate={(p) => navigate(p)} />
         ) : null
       )}
 
@@ -421,11 +364,9 @@ export default function HomePage() {
           <div className="section-header">
             <div className="section-header__line" />
             <div className="section-header__content">
-              <span className="section-eyebrow">// COCKPIT DO PRODUTO //</span>
-              <h2 className="section-title">SELECIONE UM <span className="section-title--accent">PRODUTO</span></h2>
-              <p style={{ color: "#7899b0", fontSize: 12, letterSpacing: 1, marginTop: 8 }}>
-                Escolha um produto acima para ver métricas, riscos e itens que precisam da sua atenção.
-              </p>
+              <span className="section-eyebrow">{t("cockpit.select_title")}</span>
+              <h2 className="section-title">{t("cockpit.select_heading")} <span className="section-title--accent">{t("cockpit.select_accent")}</span></h2>
+              <p style={{ color: "#7899b0", fontSize: 12, letterSpacing: 1, marginTop: 8 }}>{t("cockpit.select_hint")}</p>
             </div>
             <div className="section-header__line" />
           </div>
@@ -437,50 +378,41 @@ export default function HomePage() {
         <div className="section-header">
           <div className="section-header__line" />
           <div className="section-header__content">
-            <span className="section-eyebrow">// MÓDULOS DO SISTEMA //</span>
-            <h2 className="section-title">FERRAMENTAS <span className="section-title--accent">DE TRABALHO</span></h2>
+            <span className="section-eyebrow">{t("modules_section.eyebrow")}</span>
+            <h2 className="section-title">{t("modules_section.heading")} <span className="section-title--accent">{t("modules_section.heading_accent")}</span></h2>
           </div>
           <div className="section-header__line" />
         </div>
         <div className="modules-grid">
-          {/* ── Admin card: visível apenas para admins ── */}
           {isAdmin && (
-            <div
-              className="module-card"
-              style={{ "--card-color": "#ff9900", cursor: "pointer" } as React.CSSProperties}
-              onClick={() => navigate("/admin/users")}
-            >
-              <div className="module-card__corner module-card__corner--tl" />
-              <div className="module-card__corner module-card__corner--br" />
+            <div className="module-card" style={{ "--card-color": "#ff9900", cursor: "pointer" } as React.CSSProperties} onClick={() => navigate("/admin/users")}>
+              <div className="module-card__corner module-card__corner--tl" /><div className="module-card__corner module-card__corner--br" />
               <div className="module-card__header">
                 <span className="module-card__icon" style={{ color: "#ff9900" }}>⚙</span>
-                <span className="module-card__status module-card__status--ativo">
-                  <span className="module-card__status-dot" />ADMIN
-                </span>
+                <span className="module-card__status module-card__status--ativo"><span className="module-card__status-dot" />{t("modules_section.admin_badge")}</span>
               </div>
-              <h3 className="module-card__title">Gestão de Usuários</h3>
-              <p className="module-card__desc">Criar, editar, ativar/desativar usuários e gerar tokens de reset de senha. Exclusivo para administradores.</p>
+              <h3 className="module-card__title">{t("modules_section.modules.users.title")}</h3>
+              <p className="module-card__desc">{t("modules_section.modules.users.desc")}</p>
               <div className="module-card__footer">
                 <div className="module-card__bar"><div className="module-card__bar-fill" style={{ background: "#ff9900" }} /></div>
-                <span className="module-card__link" style={{ color: "#ff9900" }}>ACESSAR ⟩</span>
+                <span className="module-card__link" style={{ color: "#ff9900" }}>{t("modules_section.access")}</span>
               </div>
             </div>
           )}
           {MODULES.map(mod => (
-            <div key={mod.id} className="module-card" style={{ "--card-color": mod.color, cursor: "pointer" } as React.CSSProperties}
-              onClick={() => navigate(MODULE_ROUTES[mod.id] ?? "/home")}>
+            <div key={mod.id} className="module-card" style={{ "--card-color": mod.color, cursor: "pointer" } as React.CSSProperties} onClick={() => navigate(MODULE_ROUTES[mod.id] ?? "/home")}>
               <div className="module-card__corner module-card__corner--tl" /><div className="module-card__corner module-card__corner--br" />
               <div className="module-card__header">
                 <span className="module-card__icon" style={{ color: mod.color }}>{mod.icon}</span>
                 <span className={`module-card__status module-card__status--${mod.status.toLowerCase()}`}>
-                  <span className="module-card__status-dot" />{mod.status}
+                  <span className="module-card__status-dot" />{statusKey(mod.status)}
                 </span>
               </div>
-              <h3 className="module-card__title">{mod.title}</h3>
-              <p className="module-card__desc">{mod.description}</p>
+              <h3 className="module-card__title">{t(`modules_section.modules.${mod.id}.title`)}</h3>
+              <p className="module-card__desc">{t(`modules_section.modules.${mod.id}.desc`)}</p>
               <div className="module-card__footer">
                 <div className="module-card__bar"><div className="module-card__bar-fill" style={{ background: mod.color }} /></div>
-                <span className="module-card__link" style={{ color: mod.color }}>ACESSAR ⟩</span>
+                <span className="module-card__link" style={{ color: mod.color }}>{t("modules_section.access")}</span>
               </div>
             </div>
           ))}
@@ -493,30 +425,30 @@ export default function HomePage() {
         <div className="section-header">
           <div className="section-header__line" />
           <div className="section-header__content">
-            <span className="section-eyebrow">// TELEMETRIA DO SISTEMA //</span>
-            <h2 className="section-title">DADOS <span className="section-title--accent">EM TEMPO REAL</span></h2>
+            <span className="section-eyebrow">{t("stats_section.eyebrow")}</span>
+            <h2 className="section-title">{t("stats_section.heading")} <span className="section-title--accent">{t("stats_section.heading_accent")}</span></h2>
           </div>
           <div className="section-header__line" />
         </div>
         <div className="stats-grid">
           {[
-            { label: "Produtos",      value: stats?.products ?? 0 },
-            { label: "Decisões",      value: stats?.decisions ?? 0 },
-            { label: "Conhecimentos", value: stats?.knowledge_items ?? 0 },
-            { label: "Riscos",        value: stats?.risks ?? 0 },
-            { label: "Roadmap",       value: stats?.roadmap_items ?? 0 },
-            { label: "Stakeholders",  value: stats?.stakeholders ?? 0 },
-            { label: "Backlog",       value: stats?.backlog_items ?? 0 },
-            { label: "VPC Canvas",    value: stats?.vpc_items ?? 0 },
-            { label: "Features",      value: stats?.product_features ?? 0 },
-            { label: "Comunicações",  value: stats?.communications ?? 0 },
-            { label: "Usuários",      value: stats?.users ?? 0 },
+            { key: "products",       value: stats?.products ?? 0 },
+            { key: "decisions",      value: stats?.decisions ?? 0 },
+            { key: "knowledge",      value: stats?.knowledge_items ?? 0 },
+            { key: "risks",          value: stats?.risks ?? 0 },
+            { key: "roadmap",        value: stats?.roadmap_items ?? 0 },
+            { key: "stakeholders",   value: stats?.stakeholders ?? 0 },
+            { key: "backlog",        value: stats?.backlog_items ?? 0 },
+            { key: "vpc",            value: stats?.vpc_items ?? 0 },
+            { key: "features",       value: stats?.product_features ?? 0 },
+            { key: "communications", value: stats?.communications ?? 0 },
+            { key: "users",          value: stats?.users ?? 0 },
           ].map(s => (
-            <div key={s.label} className="stat-card">
+            <div key={s.key} className="stat-card">
               <div className="stat-card__corner stat-card__corner--tl" />
               <div className="stat-card__corner stat-card__corner--br" />
               <AnimatedCounter target={s.value} suffix="" />
-              <div className="stat-label">{s.label}</div>
+              <div className="stat-label">{t(`stats_section.${s.key}`)}</div>
               <div className="stat-bar"><div className="stat-bar__fill" /></div>
             </div>
           ))}
@@ -535,25 +467,21 @@ export default function HomePage() {
             </div>
           </div>
           <div className="about-content">
-            <span className="section-eyebrow">// BRIEFING DA MISSÃO //</span>
-            <h2 className="section-title">NOSSA <span className="section-title--accent">MISSÃO</span></h2>
-            <p className="about-text">
-              O Product Lab é o centro de operações estratégicas para equipes de produto que buscam excelência. Combinamos metodologias ágeis, análise de dados e frameworks de decisão para transformar visões em produtos que geram impacto real.
-            </p>
-            <p className="about-text">
-              Inspirado nos grandes laboratórios de inovação, nosso ambiente é desenhado para que Product Managers, Designers e Engenheiros colaborem com precisão cirúrgica — do discovery ao delivery.
-            </p>
+            <span className="section-eyebrow">{t("about.eyebrow")}</span>
+            <h2 className="section-title">{t("about.heading")} <span className="section-title--accent">{t("about.heading_accent")}</span></h2>
+            <p className="about-text">{t("about.text1")}</p>
+            <p className="about-text">{t("about.text2")}</p>
             <div className="about-pillars">
               {[
-                { icon: "◈", title: "Knowledge", desc: "Frameworks e metodologias validadas" },
-                { icon: "◎", title: "Decisions", desc: "Estrutura para decisões de alto impacto" },
-                { icon: "◉", title: "Impact",    desc: "Métricas claras de resultado e valor" },
+                { icon: "◈", titleKey: "about.pillar_knowledge_title", descKey: "about.pillar_knowledge_desc" },
+                { icon: "◎", titleKey: "about.pillar_decisions_title", descKey: "about.pillar_decisions_desc" },
+                { icon: "◉", titleKey: "about.pillar_impact_title",    descKey: "about.pillar_impact_desc"    },
               ].map(p => (
-                <div key={p.title} className="pillar">
+                <div key={p.titleKey} className="pillar">
                   <span className="pillar__icon">{p.icon}</span>
                   <div>
-                    <div className="pillar__title">{p.title}</div>
-                    <div className="pillar__desc">{p.desc}</div>
+                    <div className="pillar__title">{t(p.titleKey)}</div>
+                    <div className="pillar__desc">{t(p.descKey)}</div>
                   </div>
                 </div>
               ))}
@@ -580,7 +508,7 @@ export default function HomePage() {
               <span>PRODUCT</span><span className="footer-logo-lab">LAB</span>
             </span>
           </div>
-          <div className="pl-footer__tagline">KNOWLEDGE · DECISIONS · IMPACT</div>
+          <div className="pl-footer__tagline">{t("footer.tagline")}</div>
           <div className="pl-footer__clock">{time}</div>
         </div>
         <div className="pl-footer__bar" />

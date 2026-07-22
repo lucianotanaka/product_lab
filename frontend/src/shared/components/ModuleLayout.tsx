@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
 import { apiGet } from "../services/api";
 import type { Paginated } from "../services/api";
+import ThemeToggle from "./ThemeToggle";
+import LanguageSelector from "./LanguageSelector";
 import "../styles/modules.css";
 
 export interface Product {
@@ -47,13 +50,15 @@ export default function ModuleLayout({
 
   const firstName = user?.user_full_name?.split(" ")[0]?.toUpperCase() ?? "USER";
 
+  const { t } = useTranslation();
+
   return (
     <div className="mod-root">
       {/* NAV */}
       <nav className="mod-nav">
         <div className="mod-nav__inner">
           <button className="mod-nav__back" onClick={() => navigate("/home", { state: { scrollTo: "modules" } })}>
-            ⟨ HOME
+            {t("nav.back_home")}
           </button>
           <div className="mod-nav__title">
             <span className="mod-nav__icon">{moduleIcon}</span>
@@ -64,13 +69,13 @@ export default function ModuleLayout({
 
           {showProductSelector && (
             <div className="mod-nav__product">
-              <span className="mod-nav__product-label">PRODUTO:</span>
+              <span className="mod-nav__product-label">{t("nav.product_label")}</span>
               <select
                 className="mod-nav__product-select"
                 value={selectedProductId}
                 onChange={(e) => onProductChange?.(e.target.value)}
               >
-                <option value="">— TODOS —</option>
+                <option value="">{t("nav.all_products")}</option>
                 {extraSelectorOptions.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
@@ -86,12 +91,15 @@ export default function ModuleLayout({
             {firstName}
           </div>
 
+          <LanguageSelector variant="mod" />
+          <ThemeToggle variant="mod" />
+
           <button
             className="mod-nav__back"
             style={{ borderColor: "rgba(255,107,107,0.3)", color: "#ff6b6b" }}
             onClick={() => { logout(); navigate("/"); }}
           >
-            ⏻ SAIR
+            {t("common.logout")}
           </button>
         </div>
       </nav>

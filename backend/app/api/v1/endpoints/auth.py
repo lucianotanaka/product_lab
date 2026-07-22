@@ -33,6 +33,8 @@ class UserOut(BaseModel):
     user_email: str
     user_is_active: bool
     user_role: str
+    user_theme: str = "dark"
+    user_language: str = "en"
     created_at: datetime
     class Config: from_attributes = True
 
@@ -69,6 +71,40 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
 
 @router.get("/me", response_model=UserOut, summary="Retorna o usuário autenticado")
 def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+class LanguageUpdate(BaseModel):
+    user_language: str
+
+@router.patch("/me/language", response_model=UserOut, summary="Atualizar preferência de idioma do usuário autenticado")
+def update_language(
+    body: LanguageUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if body.user_language not in ("pt", "en", "es"):
+        raise HTTPException(400, "Idioma inválido. Use 'pt', 'en' ou 'es'")
+    current_user.user_language = body.user_language
+    current_user.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+class ThemeUpdate(BaseModel):
+    user_theme: str
+
+@router.patch("/me/theme", response_model=UserOut, summary="Atualizar preferência de tema do usuário autenticado")
+def update_theme(
+    body: ThemeUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if body.user_theme not in ("dark", "light"):
+        raise HTTPException(400, "Tema inválido. Use 'dark' ou 'light'")
+    current_user.user_theme = body.user_theme
+    current_user.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 @router.patch("/me/password", summary="Alterar senha do usuário autenticado")
