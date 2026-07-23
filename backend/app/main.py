@@ -32,6 +32,10 @@ def run_migrations():
         conn.execute(text("ALTER TABLE stakeholders ADD COLUMN IF NOT EXISTS notes TEXT"))
         conn.execute(text("ALTER TABLE stakeholders ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"))
 
+        # stakeholder_products
+        conn.execute(text("ALTER TABLE stakeholder_products ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE"))
+        conn.execute(text("ALTER TABLE stakeholder_products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"))
+
         # decisions
         conn.execute(text("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"))
 
@@ -60,8 +64,54 @@ def run_migrations():
         # vpc_items
         conn.execute(text("ALTER TABLE vpc_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"))
 
+        # backlog_items — sprint_id & wsjf_score type fix
+        conn.execute(text("ALTER TABLE backlog_items ADD COLUMN IF NOT EXISTS sprint_id INTEGER"))
+        conn.execute(text("""
+            DO $$
+            BEGIN
+              IF (SELECT data_type FROM information_schema.columns
+                  WHERE table_name='backlog_items' AND column_name='wsjf_score') = 'integer' THEN
+                ALTER TABLE backlog_items
+                  ALTER COLUMN wsjf_score TYPE NUMERIC(6,2)
+                  USING ROUND(wsjf_score / 10.0, 1);
+              END IF;
+            END $$;
+        """))
+
+        # sprints — tabela de sprints por produto
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS sprints (
+                sprint_id  SERIAL PRIMARY KEY,
+                product_id INTEGER NOT NULL,
+                name       VARCHAR(100) NOT NULL,
+                goal       TEXT,
+                start_date DATE,
+                end_date   DATE,
+                status     VARCHAR(20) NOT NULL DEFAULT 'planned',
+                capacity   INTEGER,
+                velocity   INTEGER,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        conn.execute(text("ALTER TABLE sprints ADD COLUMN IF NOT EXISTS capacity INTEGER"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_sprints_product ON sprints(product_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_sprints_status  ON sprints(status)"))
+
         # Communication Domain — tabelas criadas via DDL v1.0 (já existem no banco)
-        # Nenhuma migração necessária para este domínio.
+        # audience_members — vincula stakeholders a audiências
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS audience_members (
+                audience_member_id SERIAL PRIMARY KEY,
+                audience_id        INTEGER NOT NULL REFERENCES audiences(audience_id) ON DELETE CASCADE,
+                stakeholder_id     INTEGER NOT NULL REFERENCES stakeholders(stakeholder_id) ON DELETE CASCADE,
+                notes              TEXT,
+                created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT uq_audience_members UNIQUE (audience_id, stakeholder_id)
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_audience_members_audience ON audience_members(audience_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_audience_members_stakeholder ON audience_members(stakeholder_id)"))
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

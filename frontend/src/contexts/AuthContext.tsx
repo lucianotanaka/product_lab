@@ -33,7 +33,7 @@ interface AuthContextValue extends AuthState {
 // ─── Constants ────────────────────────────────────────────────────────────────
 const API = import.meta.env.VITE_API_URL || "/api/v1";
 
-const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+const INACTIVITY_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 horas
 
 const ACTIVITY_EVENTS: (keyof WindowEventMap)[] = [
   "mousemove", "mousedown", "keydown", "touchstart", "scroll", "click",
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetInactivityTimer = () => {
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     inactivityTimer.current = setTimeout(() => {
-      console.info("[Auth] Sessão encerrada por inatividade (30 min)");
+      console.info("[Auth] Sessão encerrada por inatividade (2h)");
       doLogout();
     }, INACTIVITY_TIMEOUT_MS);
   };

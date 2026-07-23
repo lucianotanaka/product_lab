@@ -36,4 +36,6 @@ class StakeholderProduct(Base):
     role           = Column(String(255))
     influence      = Column(Integer, default=3)
     interest       = Column(Integer, default=3)
+    is_active      = Column(Boolean, default=True)
     created_at     = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at     = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

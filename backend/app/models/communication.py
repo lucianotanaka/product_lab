@@ -120,6 +120,17 @@ class Audience(Base):
     updated_at             = Column(TIMESTAMP, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class AudienceMember(Base):
+    """Links specific stakeholders to an audience group."""
+    __tablename__ = "audience_members"
+
+    audience_member_id = Column(Integer, primary_key=True)
+    audience_id        = Column(Integer, nullable=False)   # FK → audiences
+    stakeholder_id     = Column(Integer, nullable=False)   # FK → stakeholders
+    notes              = Column(Text)
+    created_at         = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
+
+
 class Publication(Base):
     __tablename__ = "publications"
 

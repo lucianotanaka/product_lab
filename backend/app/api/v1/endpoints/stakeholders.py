@@ -42,7 +42,9 @@ class StakeholderProductOut(BaseModel):
     role:          Optional[str]  = None
     influence:     int            = 3
     interest:      int            = 3
+    is_active:     bool           = True
     created_at:    datetime
+    updated_at:    Optional[datetime] = None
     class Config: from_attributes = True
 
 class StakeholderOut(BaseModel):
@@ -73,6 +75,7 @@ class StakeholderProductUpdate(BaseModel):
     role:      Optional[str]  = None
     influence: Optional[int]  = None
     interest:  Optional[int]  = None
+    is_active: Optional[bool] = None
 
 # ── Router ────────────────────────────────────────────────────────────────────
 
@@ -162,6 +165,7 @@ def add_stakeholder_product(id: int, body: StakeholderProductCreate,
         for k, v in body.model_dump(exclude_unset=True).items():
             if k != "product_id" and v is not None:
                 setattr(existing, k, v)
+        existing.is_active = True  # reactivate if previously deactivated
         db.commit(); db.refresh(existing)
         return StakeholderProductOut.model_validate(existing)
     sp = StakeholderProduct(stakeholder_id=id, **body.model_dump())
@@ -181,7 +185,7 @@ def update_stakeholder_product(id: int, product_id: int,
         from fastapi import HTTPException
         raise HTTPException(404, "Associação não encontrada")
     for k, v in body.model_dump(exclude_unset=True).items():
-        if v is not None: setattr(sp, k, v)
+        setattr(sp, k, v)
     db.commit(); db.refresh(sp)
     return StakeholderProductOut.model_validate(sp)
 

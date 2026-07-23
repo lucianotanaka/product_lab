@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Column, Date, DateTime, Integer, Numeric, String, Text
 from app.core.database import Base
 
 
@@ -23,7 +23,7 @@ class BacklogItem(Base):
     wsjf_time_criticality = Column(Integer, default=1)
     wsjf_risk_reduction   = Column(Integer, default=1)
     wsjf_job_size         = Column(Integer, default=1)
-    wsjf_score            = Column(Integer, default=0)   # (bv + tc + rr) / job_size * 10, stored as int
+    wsjf_score            = Column(Numeric(6, 2), default=0.0)  # (bv + tc + rr) / job_size, 1 decimal
     created_at            = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at          = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     completed_at        = Column(DateTime, nullable=True)
@@ -36,6 +36,21 @@ class BacklogItemType(Base):
     description   = Column(Text)
     display_order = Column(Integer, default=0)
     is_active     = Column(Boolean, default=True)
+
+
+class Sprint(Base):
+    __tablename__ = "sprints"
+    sprint_id   = Column(Integer, primary_key=True, autoincrement=True)
+    product_id  = Column(Integer, nullable=False, index=True)
+    name        = Column(String(100), nullable=False)
+    goal        = Column(Text)
+    start_date  = Column(Date, nullable=True)
+    end_date    = Column(Date, nullable=True)
+    status      = Column(String(20), default="planned")   # planned | active | completed | cancelled
+    capacity    = Column(Integer, nullable=True)           # story points planejados (disponibilidade do time)
+    velocity    = Column(Integer, nullable=True)           # story points efetivamente entregues
+    created_at  = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class BacklogItemSuggestion(Base):

@@ -2,19 +2,20 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.models.backlog import BacklogItem, BacklogItemType, BacklogItemSuggestion
+from app.models.backlog import BacklogItem, BacklogItemType, BacklogItemSuggestion, Sprint
 from app.repositories.base import BaseRepository
 from app.schemas.common import Paginated
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import date, datetime
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
-def calc_wsjf(bv: int, tc: int, rr: int, js: int) -> int:
-    """WSJF = (CoD / Job Size) * 10, arredondado para inteiro."""
+def calc_wsjf(bv: int, tc: int, rr: int, js: int) -> float:
+    """WSJF = CoD / Job Size  (1 decimal place). CoD = BV + TC + RR."""
     cost_of_delay = bv + tc + rr
-    if js <= 0: return 0
-    return round((cost_of_delay / js) * 10)
+    if js <= 0:
+        return 0.0
+    return round(cost_of_delay / js, 1)
 
 class BacklogItemCreate(BaseModel):
     product_id:             Optional[int]  = None
@@ -70,7 +71,7 @@ class BacklogItemOut(BaseModel):
     wsjf_time_criticality:  int            = 1
     wsjf_risk_reduction:    int            = 1
     wsjf_job_size:          int            = 1
-    wsjf_score:             int            = 0
+    wsjf_score:             float          = 0.0
     created_at:             datetime
     updated_at:             datetime
     completed_at:           Optional[datetime] = None
@@ -82,6 +83,39 @@ class ItemTypeOut(BaseModel):
     description:   Optional[str] = None
     display_order: int           = 0
     is_active:     bool          = True
+    class Config: from_attributes = True
+
+class SprintCreate(BaseModel):
+    product_id: int
+    name:       str
+    goal:       Optional[str]  = None
+    start_date: Optional[date] = None
+    end_date:   Optional[date] = None
+    status:     str            = "planned"
+    capacity:   Optional[int]  = None
+    velocity:   Optional[int]  = None
+
+class SprintUpdate(BaseModel):
+    name:       Optional[str]  = None
+    goal:       Optional[str]  = None
+    start_date: Optional[date] = None
+    end_date:   Optional[date] = None
+    status:     Optional[str]  = None
+    capacity:   Optional[int]  = None
+    velocity:   Optional[int]  = None
+
+class SprintOut(BaseModel):
+    sprint_id:  int
+    product_id: int
+    name:       str
+    goal:       Optional[str]  = None
+    start_date: Optional[date] = None
+    end_date:   Optional[date] = None
+    status:     str            = "planned"
+    capacity:   Optional[int]  = None
+    velocity:   Optional[int]  = None
+    created_at: datetime
+    updated_at: datetime
     class Config: from_attributes = True
 
 class SuggestionCreate(BaseModel):
@@ -181,6 +215,33 @@ def list_types(db: Session = Depends(get_db)):
     types = db.query(BacklogItemType).filter(BacklogItemType.is_active == True)\
                .order_by(BacklogItemType.display_order).all()
     return [ItemTypeOut.model_validate(t) for t in types]
+
+
+# ── Sprints ───────────────────────────────────────────────────────────────────
+
+@router.get("/sprints", response_model=List[SprintOut])
+def list_sprints(product_id: Optional[int] = None, db: Session = Depends(get_db)):
+    q = db.query(Sprint)
+    if product_id is not None:
+        q = q.filter(Sprint.product_id == product_id)
+    return [SprintOut.model_validate(s) for s in q.order_by(Sprint.sprint_id).all()]
+
+
+@router.post("/sprints", response_model=SprintOut, status_code=status.HTTP_201_CREATED)
+def create_sprint(body: SprintCreate, db: Session = Depends(get_db)):
+    return BaseRepository(Sprint, db).create(body.model_dump())
+
+
+@router.patch("/sprints/{id}", response_model=SprintOut)
+def update_sprint(id: int, body: SprintUpdate, db: Session = Depends(get_db)):
+    repo = BaseRepository(Sprint, db)
+    return repo.update(repo.get_or_404(id), body.model_dump(exclude_unset=True))
+
+
+@router.delete("/sprints/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_sprint(id: int, db: Session = Depends(get_db)):
+    repo = BaseRepository(Sprint, db)
+    repo.delete(repo.get_or_404(id))
 
 
 # ── Suggestions ───────────────────────────────────────────────────────────────
