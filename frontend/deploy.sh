@@ -1,17 +1,25 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 # Configuração de cores para o terminal
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m' # Sem cor
 
 echo -e "${YELLOW}[1/5] Iniciando o processo de build do React...${NC}"
 
 # Coleta a versão do Git (tag mais próxima ou hash curto)
-VITE_APP_VERSION=$(git -C /opt/product_lab describe --tags --always --dirty 2>/dev/null || echo "dev")
-export VITE_APP_VERSION
-echo -e "    Versão detectada: ${CYAN:-}${VITE_APP_VERSION}${NC:-}"
+# Remove o sufixo '-dirty' e o prefixo 'v' para obter uma versão limpa (ex: v2.0.5-dirty → 2.0.5)
+REPO_DIR="$(git rev-parse --show-toplevel 2>/dev/null || echo /opt/product_lab)"
+RAW_VERSION=$(git -C "$REPO_DIR" describe --tags --always --dirty 2>/dev/null || echo "dev")
+CLEAN_VERSION=$(echo "$RAW_VERSION" | sed 's/-dirty$//' | sed 's/^v//')
+export VITE_APP_VERSION="$CLEAN_VERSION"
+echo -e "    Versão detectada: ${CYAN}${CLEAN_VERSION}${NC}"
+
+# Sincroniza a versão no package.json para que o npm e o Vite exibam a versão correta
+npm pkg set version="$CLEAN_VERSION"
 
 # 1. Executa a compilação do frontend
 if npm run build; then
@@ -54,7 +62,7 @@ fi
 echo -e "${YELLOW}[5/5] Testando e reiniciando o servidor Apache (httpd)...${NC}"
 
 # 5. Valida as configurações do Apache antes de dar restart
-if ! httpd -t &>/dev/null; then
+if ! sudo httpd -t &>/dev/null; then
     echo -e "${RED}❌ Erro crítico: O Apache detectou um erro de sintaxe nas configurações gerais. O serviço não foi reiniciado.${NC}"
     exit 1
 fi

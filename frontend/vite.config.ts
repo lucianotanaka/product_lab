@@ -10,7 +10,7 @@ export default defineConfig({
   base: '/productlab/',
   plugins: [react()],
   define: {
-    // Injeta a versão do package.json como variável de ambiente
-    'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
+    // Prefere a versão exportada pelo deploy.sh (VITE_APP_VERSION); fallback para package.json
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.VITE_APP_VERSION || pkg.version),
   },
 })

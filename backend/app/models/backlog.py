@@ -8,14 +8,20 @@ class BacklogItem(Base):
     item_id             = Column(Integer, primary_key=True, autoincrement=True)
     product_id          = Column(Integer, nullable=True, index=True)
     feature_id          = Column(Integer, nullable=True)
-    sprint_id           = Column(Integer, nullable=True)
-    ado_id              = Column(String(50))
+    sprint_id                = Column(Integer, nullable=True)
+    start_sprint_id          = Column(Integer, nullable=True)  # sprint de início (para epics/features multi-sprint)
+    end_sprint_id            = Column(Integer, nullable=True)  # sprint de término
+    requester_stakeholder_id = Column(Integer, nullable=True)  # FK → stakeholders.stakeholder_id
+    assigned_to_member_id    = Column(Integer, nullable=True)  # FK → team_members.member_id
+    ado_id                   = Column(String(50))
     item_type_id        = Column(Integer, nullable=True)     # FK → backlog_item_types.item_type_id
     title               = Column(String(250), nullable=False)
     description         = Column(Text)
     current_status      = Column(String(30), default="open")
     business_value      = Column(Text)
     acceptance_criteria = Column(Text)
+    definition_of_done  = Column(Text)
+    business_rules      = Column(Text)
     story_points        = Column(Integer)
     priority            = Column(Integer, default=3)
     # WSJF components (Weighted Shortest Job First)
@@ -51,6 +57,27 @@ class Sprint(Base):
     velocity    = Column(Integer, nullable=True)           # story points efetivamente entregues
     created_at  = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class BacklogItemLink(Base):
+    """Links/relações entre itens (pai-filho, bloqueio, predecessora, etc.)."""
+    __tablename__ = "backlog_item_links"
+    link_id    = Column(Integer, primary_key=True, autoincrement=True)
+    source_id  = Column(Integer, nullable=False, index=True)
+    target_id  = Column(Integer, nullable=False, index=True)
+    link_type  = Column(String(30), default="relates_to", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class BacklogItemNote(Base):
+    """Anotações e histórico de um item do backlog."""
+    __tablename__ = "backlog_item_notes"
+    note_id    = Column(Integer, primary_key=True, autoincrement=True)
+    item_id    = Column(Integer, nullable=False, index=True)  # FK → backlog_items.item_id
+    author     = Column(String(150), nullable=False)
+    content    = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class BacklogItemSuggestion(Base):

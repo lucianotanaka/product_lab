@@ -64,8 +64,45 @@ def run_migrations():
         # vpc_items
         conn.execute(text("ALTER TABLE vpc_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"))
 
-        # backlog_items — sprint_id & wsjf_score type fix
+        # backlog_items — sprint_id, requester, DoD, assigned_to & wsjf_score type fix
         conn.execute(text("ALTER TABLE backlog_items ADD COLUMN IF NOT EXISTS sprint_id INTEGER"))
+        conn.execute(text("ALTER TABLE backlog_items ADD COLUMN IF NOT EXISTS requester_stakeholder_id INTEGER"))
+        conn.execute(text("ALTER TABLE backlog_items ADD COLUMN IF NOT EXISTS definition_of_done TEXT"))
+        conn.execute(text("ALTER TABLE backlog_items ADD COLUMN IF NOT EXISTS assigned_to_member_id INTEGER"))
+        conn.execute(text("ALTER TABLE backlog_items ADD COLUMN IF NOT EXISTS business_rules TEXT"))
+        conn.execute(text("ALTER TABLE backlog_items ADD COLUMN IF NOT EXISTS start_sprint_id INTEGER"))
+        conn.execute(text("ALTER TABLE backlog_items ADD COLUMN IF NOT EXISTS end_sprint_id INTEGER"))
+        # Backfill: itens já cadastrados com sprint_id → copiar para start_sprint_id e end_sprint_id
+        conn.execute(text("""
+            UPDATE backlog_items
+            SET start_sprint_id = sprint_id,
+                end_sprint_id   = sprint_id
+            WHERE sprint_id IS NOT NULL
+              AND start_sprint_id IS NULL
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS backlog_item_notes (
+                note_id    SERIAL PRIMARY KEY,
+                item_id    INTEGER NOT NULL REFERENCES backlog_items(item_id) ON DELETE CASCADE,
+                author     VARCHAR(150) NOT NULL,
+                content    TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_notes_item ON backlog_item_notes(item_id)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS backlog_item_links (
+                link_id    SERIAL PRIMARY KEY,
+                source_id  INTEGER NOT NULL REFERENCES backlog_items(item_id) ON DELETE CASCADE,
+                target_id  INTEGER NOT NULL REFERENCES backlog_items(item_id) ON DELETE CASCADE,
+                link_type  VARCHAR(30) NOT NULL DEFAULT 'relates_to',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT uq_item_link UNIQUE (source_id, target_id, link_type)
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_links_source ON backlog_item_links(source_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_links_target ON backlog_item_links(target_id)"))
         conn.execute(text("""
             DO $$
             BEGIN
@@ -97,6 +134,52 @@ def run_migrations():
         conn.execute(text("ALTER TABLE sprints ADD COLUMN IF NOT EXISTS capacity INTEGER"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_sprints_product ON sprints(product_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_sprints_status  ON sprints(status)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_backlog_assigned ON backlog_items(assigned_to_member_id)"))
+
+        # team_members — cadastro mestre de membros da equipe
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS team_members (
+                member_id     SERIAL PRIMARY KEY,
+                full_name     VARCHAR(150) NOT NULL,
+                email         VARCHAR(255),
+                resource_type VARCHAR(30) NOT NULL DEFAULT 'internal',
+                department    VARCHAR(100),
+                company       VARCHAR(150),
+                is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        # add columns if table existed before these fields were added
+        conn.execute(text("ALTER TABLE team_members ADD COLUMN IF NOT EXISTS email VARCHAR(255)"))
+        conn.execute(text("ALTER TABLE team_members ADD COLUMN IF NOT EXISTS resource_type VARCHAR(30) NOT NULL DEFAULT 'internal'"))
+        conn.execute(text("ALTER TABLE team_members ADD COLUMN IF NOT EXISTS department VARCHAR(100)"))
+        conn.execute(text("ALTER TABLE team_members ADD COLUMN IF NOT EXISTS company VARCHAR(150)"))
+        conn.execute(text("ALTER TABLE team_members ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE"))
+        conn.execute(text("ALTER TABLE team_members ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"))
+        conn.execute(text("ALTER TABLE team_members ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS team_member_products (
+                id         SERIAL PRIMARY KEY,
+                member_id  INTEGER NOT NULL REFERENCES team_members(member_id) ON DELETE CASCADE,
+                product_id INTEGER NOT NULL,
+                role       VARCHAR(100),
+                start_date DATE,
+                end_date   DATE,
+                is_active  BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT uq_team_member_product UNIQUE (member_id, product_id)
+            )
+        """))
+        conn.execute(text("ALTER TABLE team_member_products ADD COLUMN IF NOT EXISTS role VARCHAR(100)"))
+        conn.execute(text("ALTER TABLE team_member_products ADD COLUMN IF NOT EXISTS start_date DATE"))
+        conn.execute(text("ALTER TABLE team_member_products ADD COLUMN IF NOT EXISTS end_date DATE"))
+        conn.execute(text("ALTER TABLE team_member_products ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE"))
+        conn.execute(text("ALTER TABLE team_member_products ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"))
+        conn.execute(text("ALTER TABLE team_member_products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_tmp_product ON team_member_products(product_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_tmp_member  ON team_member_products(member_id)"))
 
         # Communication Domain — tabelas criadas via DDL v1.0 (já existem no banco)
         # audience_members — vincula stakeholders a audiências
