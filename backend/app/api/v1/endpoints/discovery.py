@@ -135,6 +135,105 @@ def upsert_problem_statement(opp_id: str, body: ProblemStatementUpsert, db: Sess
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# 2b. GENERATE VPC FROM DISCOVERY (snapshot — Opção A)
+# ══════════════════════════════════════════════════════════════════════════════
+
+import uuid as _uuid
+
+class GenerateVPCOut(BaseModel):
+    canvas_id: str
+    canvas_name: str
+    items_created: int
+    class Config: from_attributes = True
+
+@router.post("/opportunities/{opp_id}/generate-vpc", response_model=GenerateVPCOut, status_code=status.HTTP_201_CREATED)
+def generate_vpc_from_discovery(opp_id: str, db: Session = Depends(get_db)):
+    """
+    Snapshot — Opção A: creates a new vpc_canvas linked to the opportunity
+    and populates it with data from JTBD, PROBLEM and SOLUTIONS.
+    """
+    from app.models.vpc import VPCCanvas, VPCItem
+
+    opp = _get_or_404(DiscoveryOpportunity, opp_id, db)
+
+    # Create canvas
+    canvas_id = str(_uuid.uuid4())
+    canvas_name = f"VPC — {opp.title[:60]}"
+    canvas = VPCCanvas(
+        id=canvas_id,
+        product_id=str(opp.product_id),
+        name=canvas_name,
+        description=f"Gerado automaticamente a partir da oportunidade: {opp.title}",
+        discovery_opportunity_id=opp_id,
+    )
+    db.add(canvas)
+    db.flush()
+
+    items_created = 0
+
+    # 1. JTBD → Customer Jobs
+    jtbd_list = db.query(DiscoveryJTBD).filter(DiscoveryJTBD.opportunity_id == opp_id).all()
+    for j in jtbd_list:
+        item = VPCItem(
+            id=str(_uuid.uuid4()),
+            product_id=str(opp.product_id),
+            canvas_id=canvas_id,
+            type="job",
+            name=j.description[:150] if j.description else None,
+            content=j.description or "",
+            priority=j.priority,
+        )
+        db.add(item)
+        # Update vpc_item_id link on the JTBD for traceability
+        j.vpc_item_id = item.id
+        items_created += 1
+
+    # 2. PROBLEM STATEMENT → Pains
+    from app.models.discovery import DiscoveryProblemStatement
+    ps = db.query(DiscoveryProblemStatement).filter(
+        DiscoveryProblemStatement.opportunity_id == opp_id
+    ).first()
+    if ps:
+        pain_fields = [
+            ("Problema Observado", ps.observed_problem),
+            ("Quem é Afetado", ps.who_is_affected),
+            ("Impacto Atual", ps.current_impact),
+        ]
+        for name, content in pain_fields:
+            if content and content.strip():
+                db.add(VPCItem(
+                    id=str(_uuid.uuid4()),
+                    product_id=str(opp.product_id),
+                    canvas_id=canvas_id,
+                    type="pain",
+                    name=name,
+                    content=content,
+                    priority=3,
+                ))
+                items_created += 1
+
+    # 3. SOLUTIONS (not discarded) → Products & Services
+    solutions = db.query(DiscoverySolutionIdea).filter(
+        DiscoverySolutionIdea.opportunity_id == opp_id,
+        DiscoverySolutionIdea.status != "discarded",
+    ).all()
+    for s in solutions:
+        db.add(VPCItem(
+            id=str(_uuid.uuid4()),
+            product_id=str(opp.product_id),
+            canvas_id=canvas_id,
+            type="product",
+            name=s.idea[:150] if s.idea else None,
+            content=s.description or s.idea or "",
+            priority=3,
+        ))
+        items_created += 1
+
+    db.commit()
+    return GenerateVPCOut(canvas_id=canvas_id, canvas_name=canvas_name, items_created=items_created)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # 3. JTBD
 # ══════════════════════════════════════════════════════════════════════════════
 

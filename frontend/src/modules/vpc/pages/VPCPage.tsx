@@ -6,7 +6,7 @@ import { apiGet, apiPost, apiPatch, apiDelete } from "../../../shared/services/a
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface VPCCanvas { id: string; product_id: string; name: string; description?: string; }
+interface VPCCanvas { id: string; product_id: string; name: string; description?: string; discovery_opportunity_id?: string | null; }
 interface ItemSlim  { id: string; type: string; name?: string | null; content: string; priority: number; parent_id?: string | null; }
 interface JobNode   { job: ItemSlim; pains: ItemSlim[]; gains: ItemSlim[]; }
 interface VPNode    { item: ItemSlim; addresses: ItemSlim[]; }   // N:M — list of linked targets
@@ -726,6 +726,11 @@ export default function VPCPage() {
           >
             {canvases.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+          {canvas && canvas.discovery_opportunity_id && (
+            <span style={{ fontSize:9, color:"#00d4ff", letterSpacing:1, padding:"3px 8px", border:"1px solid rgba(0,212,255,0.3)", borderRadius:2, opacity:0.8 }}>
+              ⟵ DISCOVERY
+            </span>
+          )}
           {canvas && (
             <button className="btn-icon" style={{ fontSize: 10 }}
               onClick={() => { setCf({ name: canvas.name, description: canvas.description ?? "" }); setEditingCanvas(true); setCanvasModal(true); }}>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import ModuleLayout from "../../../shared/components/ModuleLayout";
 import { useAuth } from "../../../contexts/AuthContext";
 import { apiGet, apiPost, apiPatch, apiDelete, apiPut } from "../../../shared/services/api";
@@ -29,15 +30,12 @@ function Badge({ v }: { v: string }) {
   const c = SC[v] ?? "#7899b0";
   return <span style={{ fontSize:9, letterSpacing:1, padding:"2px 7px", borderRadius:2, border:`1px solid ${c}55`, color:c, background:`${c}12` }}>{v.toUpperCase().replace(/_/g," ")}</span>;
 }
-
 function Fld({ lbl, children }: { lbl: string; children: React.ReactNode }) {
   return <div className="mod-field"><label className="mod-field__label">{lbl}</label>{children}</div>;
 }
-
 function EmptyItem({ text }: { text: string }) {
   return <div style={{ fontSize:11, color:"#7899b0", textAlign:"center", padding:"20px 0" }}>{text}</div>;
 }
-
 function ItemCard({ title, sub, badge, onEdit, onDel }: { title:string; sub?:string; badge?:string; onEdit:()=>void; onDel:()=>void; }) {
   const { t } = useTranslation();
   return (
@@ -56,7 +54,6 @@ function ItemCard({ title, sub, badge, onEdit, onDel }: { title:string; sub?:str
     </div>
   );
 }
-
 function SecHdr({ eyebrow, onAdd, addLbl }: { eyebrow:string; onAdd?:()=>void; addLbl?:string }) {
   return (
     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
@@ -65,7 +62,6 @@ function SecHdr({ eyebrow, onAdd, addLbl }: { eyebrow:string; onAdd?:()=>void; a
     </div>
   );
 }
-
 function ModalShell({ title, sub, onClose, onSave, saving, children }: { title:string; sub:string; onClose:()=>void; onSave:()=>void; saving:boolean; children:React.ReactNode; }) {
   const { t } = useTranslation();
   return (
@@ -189,15 +185,8 @@ function TabJTBD({ oppId, productId }: { oppId:string; productId:string }) {
       {modal && (
         <ModalShell title={modal==="new"?t("discovery.modal_new_jtbd"):t("discovery.modal_edit_jtbd")} sub={t("discovery.modal_jtbd_subtitle")} onClose={()=>setModal(null)} onSave={save} saving={saving}>
           <Fld lbl={t("discovery.jtbd_field_description")}><textarea className="mod-textarea" style={{ minHeight:100 }} value={f.description} onChange={e=>setF(p=>({...p,description:e.target.value}))} placeholder={t("discovery.jtbd_placeholder_description")} /></Fld>
-          <Fld lbl={t("discovery.jtbd_field_type")}>
-            <select className="mod-select" value={f.job_type} onChange={e=>setF(p=>({...p,job_type:e.target.value}))}>
-              <option value="principal">{t("discovery.jtbd_type_principal")}</option>
-              <option value="secondary">{t("discovery.jtbd_type_secondary")}</option>
-            </select>
-          </Fld>
-          <Fld lbl={t("discovery.jtbd_field_priority")}>
-            <div className="influence-grid">{[1,2,3,4,5].map(n=><button key={n} type="button" className={`influence-btn ${f.priority===n?"influence-btn--active":""}`} onClick={()=>setF(p=>({...p,priority:n}))}>{n}</button>)}</div>
-          </Fld>
+          <Fld lbl={t("discovery.jtbd_field_type")}><select className="mod-select" value={f.job_type} onChange={e=>setF(p=>({...p,job_type:e.target.value}))}><option value="principal">{t("discovery.jtbd_type_principal")}</option><option value="secondary">{t("discovery.jtbd_type_secondary")}</option></select></Fld>
+          <Fld lbl={t("discovery.jtbd_field_priority")}><div className="influence-grid">{[1,2,3,4,5].map(n=><button key={n} type="button" className={`influence-btn ${f.priority===n?"influence-btn--active":""}`} onClick={()=>setF(p=>({...p,priority:n}))}>{n}</button>)}</div></Fld>
           <Fld lbl={t("discovery.jtbd_field_frequency")}><input className="mod-input" value={f.frequency} onChange={e=>setF(p=>({...p,frequency:e.target.value}))} /></Fld>
           <Fld lbl={t("discovery.jtbd_field_context")}><textarea className="mod-textarea" value={f.context} onChange={e=>setF(p=>({...p,context:e.target.value}))} /></Fld>
           <Fld lbl={t("discovery.jtbd_field_result")}><textarea className="mod-textarea" value={f.expected_result} onChange={e=>setF(p=>({...p,expected_result:e.target.value}))} /></Fld>
@@ -218,14 +207,7 @@ function TabResearch({ oppId }: { oppId:string }) {
   const TYPES = ["interview","meeting","observation","survey","quantitative","feedback","document","evidence"];
   const openNew = () => { setF({ research_type:"interview", participants:"", research_date:"", questions:"", findings:"", evidence:"", source:"", reliability:"medium" }); setEdit(null); setModal("new"); };
   const openEdit = (r:Research) => { setF({ research_type:r.research_type, participants:r.participants??"", research_date:r.research_date??"", questions:r.questions??"", findings:r.findings??"", evidence:r.evidence??"", source:r.source??"", reliability:r.reliability }); setEdit(r); setModal("edit"); };
-  const save = async () => {
-    setSaving(true);
-    try {
-      if (modal==="new") await apiPost(`/discovery/opportunities/${oppId}/research`, f);
-      else if (edit) await apiPatch(`/discovery/research/${edit.id}`, f);
-      setModal(null); reload();
-    } catch{/**/} finally{setSaving(false);}
-  };
+  const save = async () => { setSaving(true); try { if (modal==="new") await apiPost(`/discovery/opportunities/${oppId}/research`, f); else if (edit) await apiPatch(`/discovery/research/${edit.id}`, f); setModal(null); reload(); } catch{/**/} finally{setSaving(false);} };
   return (
     <div>
       <SecHdr eyebrow={t("discovery.research_eyebrow")} onAdd={openNew} addLbl={t("discovery.btn_new_research")} />
@@ -258,14 +240,7 @@ function TabInsights({ oppId }: { oppId:string }) {
   const [saving, setSaving] = useState(false);
   const openNew = () => { setF({ insight:"", affected_audience:"", impact:"medium", observed_frequency:"", confidence:"medium", product_implication:"" }); setEdit(null); setModal("new"); };
   const openEdit = (i:Insight) => { setF({ insight:i.insight, affected_audience:i.affected_audience??"", impact:i.impact, observed_frequency:i.observed_frequency??"", confidence:i.confidence, product_implication:i.product_implication??"" }); setEdit(i); setModal("edit"); };
-  const save = async () => {
-    setSaving(true);
-    try {
-      if (modal==="new") await apiPost(`/discovery/opportunities/${oppId}/insights`, f);
-      else if (edit) await apiPatch(`/discovery/insights/${edit.id}`, f);
-      setModal(null); reload();
-    } catch{/**/} finally{setSaving(false);}
-  };
+  const save = async () => { setSaving(true); try { if (modal==="new") await apiPost(`/discovery/opportunities/${oppId}/insights`, f); else if (edit) await apiPatch(`/discovery/insights/${edit.id}`, f); setModal(null); reload(); } catch{/**/} finally{setSaving(false);} };
   return (
     <div>
       <SecHdr eyebrow={t("discovery.insights_eyebrow")} onAdd={openNew} addLbl={t("discovery.btn_new_insight")} />
@@ -399,7 +374,7 @@ function TabMetrics({ oppId }: { oppId:string }) {
     <div>
       <SecHdr eyebrow={t("discovery.metrics_eyebrow")} onAdd={openNew} addLbl={t("discovery.btn_new_metric")} />
       {items.length===0 ? <EmptyItem text={t("discovery.metrics_empty")} /> : items.map(m => (
-        <ItemCard key={m.id} title={m.metric} sub={`${t(`discovery.metric_type_${m.metric_type}`)} | Baseline: ${m.baseline??"-"} → Meta: ${m.target??"-"}`} badge={m.metric_type} onEdit={()=>openEdit(m)} onDel={()=>remove(m.id,`/discovery/success-metrics/${m.id}`)} />
+        <ItemCard key={m.id} title={m.metric} sub={`${t(`discovery.metric_type_${m.metric_type}`)} | ${m.baseline??"-"} → ${m.target??"-"}`} badge={m.metric_type} onEdit={()=>openEdit(m)} onDel={()=>remove(m.id,`/discovery/success-metrics/${m.id}`)} />
       ))}
       {modal && (
         <ModalShell title={modal==="new"?t("discovery.modal_new_metric"):t("discovery.modal_edit_metric")} sub={t("discovery.modal_metric_subtitle")} onClose={()=>setModal(null)} onSave={save} saving={saving}>
@@ -426,261 +401,100 @@ interface VPCStructured {
   gain_creators: Array<{ item: VPCItemSlim; addresses: VPCItemSlim[] }>;
 }
 interface VPCItemSlim { id:string; type:string; name?:string|null; content:string; priority:number; parent_id?:string|null; }
-interface VPCLink { id:string; canvas_id:string; source_id:string; target_id:string; }
 
-const NM_VPC = ["pain_reliever","gain_creator","product"];
-const accentVPC = (type:string) => ({ job:"#00d4ff", product:"#00d4ff", pain:"#ff4466", pain_reliever:"#ff4466", gain:"#00ff88", gain_creator:"#00ff88" }[type] ?? "#7899b0");
-
-// ── VPCDiagramInline — full visual diagram (square VP + circle CP) ─────────────
+// ── VPCDiagramInline ──────────────────────────────────────────────────────────
 function VPCDiagramInline({ data, dark }: { data: VPCStructured; dark: boolean }) {
   const { t } = useTranslation();
-  const jobs      = data.jobs.map(j => j.job);
-  const pains     = [...data.jobs.flatMap(j => j.pains), ...data.orphan_pains];
-  const gains     = [...data.jobs.flatMap(j => j.gains), ...data.orphan_gains];
-  const products  = data.products.map(n => n.item);
-  const relievers = data.pain_relievers.map(n => n.item);
-  const creators  = data.gain_creators.map(n => n.item);
-
-  const c = dark ? {
-    vpBg:"rgba(0,136,200,0.12)", vpBorder:"rgba(0,212,255,0.5)",
-    cpBorder:"rgba(255,68,102,0.6)", cpBg:"rgba(220,60,80,0.12)",
-    vpTitle:"#00d4ff", cpTitle:"#ff4466",
-    divider:"rgba(0,212,255,0.3)", cpDivider:"rgba(255,68,102,0.4)",
-    text:"#c8dce8", sub:"#7899b0",
-    jobColor:"#00d4ff", painColor:"#ff4466", gainColor:"#00ff88",
-    productColor:"#00d4ff", relieverColor:"#ff4466", creatorColor:"#00ff88",
-  } : {
-    vpBg:"rgba(0,100,180,0.08)", vpBorder:"rgba(0,136,170,0.5)",
-    cpBorder:"rgba(204,51,51,0.5)", cpBg:"rgba(200,40,60,0.08)",
-    vpTitle:"#0088aa", cpTitle:"#cc3333",
-    divider:"rgba(0,136,170,0.3)", cpDivider:"rgba(204,51,51,0.4)",
-    text:"#1a2a3a", sub:"#5a7080",
-    jobColor:"#0088aa", painColor:"#cc3333", gainColor:"#006e38",
-    productColor:"#0088aa", relieverColor:"#cc3333", creatorColor:"#006e38",
-  };
-
-  const Items = ({ items, color, maxH=130 }: { items:{id:string;name?:string|null;content:string}[]; color:string; maxH?:number }) => (
-    <div style={{ overflowY:"auto", maxHeight:maxH, paddingRight:4 }}>
-      {items.length===0 ? <div style={{ fontSize:9, color:c.sub, fontStyle:"italic" }}>—</div>
-        : items.map(i=>(
-          <div key={i.id} style={{ fontSize:10, color:c.text, marginBottom:3, lineHeight:1.3 }}>
-            <span style={{ color, fontWeight:700 }}>·</span> {i.name??i.content.substring(0,42)}{!i.name&&i.content.length>42?"…":""}
-          </div>
-        ))}
-    </div>
-  );
-
-  const vpS = 500; const cpS = 500; const r = cpS/2; const cx = r; const cy = r;
-  const arc = (s:number, e:number) => {
-    const toRad=(d:number)=>(d*Math.PI)/180;
-    const x1=cx+r*Math.cos(toRad(((s%360)+360)%360)); const y1=cy+r*Math.sin(toRad(((s%360)+360)%360));
-    const x2=cx+r*Math.cos(toRad(((e%360)+360)%360)); const y2=cy+r*Math.sin(toRad(((e%360)+360)%360));
-    const span=((e-s)%360+360)%360; const large=span>180?1:0;
-    return `M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
-  };
-  const div1=60; const div2=180; const div3=300;
-
+  const jobs=data.jobs.map(j=>j.job), pains=[...data.jobs.flatMap(j=>j.pains),...data.orphan_pains], gains=[...data.jobs.flatMap(j=>j.gains),...data.orphan_gains];
+  const products=data.products.map(n=>n.item), relievers=data.pain_relievers.map(n=>n.item), creators=data.gain_creators.map(n=>n.item);
+  const c = dark ? { vpBg:"rgba(0,136,200,0.12)", vpBorder:"rgba(0,212,255,0.5)", cpBorder:"rgba(255,68,102,0.6)", cpBg:"rgba(220,60,80,0.12)", vpTitle:"#00d4ff", cpTitle:"#ff4466", divider:"rgba(0,212,255,0.3)", cpDivider:"rgba(255,68,102,0.4)", text:"#c8dce8", sub:"#7899b0", jobColor:"#00d4ff", painColor:"#ff4466", gainColor:"#00ff88", productColor:"#00d4ff", relieverColor:"#ff4466", creatorColor:"#00ff88" } : { vpBg:"rgba(0,100,180,0.08)", vpBorder:"rgba(0,136,170,0.5)", cpBorder:"rgba(204,51,51,0.5)", cpBg:"rgba(200,40,60,0.08)", vpTitle:"#0088aa", cpTitle:"#cc3333", divider:"rgba(0,136,170,0.3)", cpDivider:"rgba(204,51,51,0.4)", text:"#1a2a3a", sub:"#5a7080", jobColor:"#0088aa", painColor:"#cc3333", gainColor:"#006e38", productColor:"#0088aa", relieverColor:"#cc3333", creatorColor:"#006e38" };
+  const Items = ({ items, color, maxH=130 }: { items:{id:string;name?:string|null;content:string}[]; color:string; maxH?:number }) => (<div style={{ overflowY:"auto", maxHeight:maxH, paddingRight:4 }}>{items.length===0 ? <div style={{ fontSize:9, color:c.sub, fontStyle:"italic" }}>—</div> : items.map(i=>(<div key={i.id} style={{ fontSize:10, color:c.text, marginBottom:3, lineHeight:1.3 }}><span style={{ color, fontWeight:700 }}>·</span> {i.name??i.content.substring(0,42)}{!i.name&&i.content.length>42?"…":""}</div>))}</div>);
+  const vpS=500, cpS=500, r=cpS/2, cx=r, cy=r;
+  const arc=(s:number,e:number)=>{ const toRad=(d:number)=>(d*Math.PI)/180; const x1=cx+r*Math.cos(toRad(((s%360)+360)%360)), y1=cy+r*Math.sin(toRad(((s%360)+360)%360)), x2=cx+r*Math.cos(toRad(((e%360)+360)%360)), y2=cy+r*Math.sin(toRad(((e%360)+360)%360)); const span=((e-s)%360+360)%360, large=span>180?1:0; return `M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`; };
+  const div1=60,div2=180,div3=300;
   return (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:16, flexWrap:"wrap" }}>
-        {/* VALUE PROPOSITION square */}
         <div style={{ position:"relative", width:vpS, height:vpS, background:c.vpBg, border:`2px solid ${c.vpBorder}`, borderRadius:4, flexShrink:0 }}>
           <div style={{ position:"absolute", top:10, left:"50%", transform:"translateX(-50%)", fontSize:12, fontWeight:700, color:c.vpTitle, letterSpacing:2, whiteSpace:"nowrap", zIndex:2 }}>{t("vpc.diagram_vp_title")}</div>
-          <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%" }} viewBox={`0 0 ${vpS} ${vpS}`}>
-            <line x1={0} y1={0} x2={vpS} y2={vpS} stroke={c.divider} strokeWidth="1.5" />
-            <line x1={vpS} y1={0} x2={0} y2={vpS} stroke={c.divider} strokeWidth="1.5" />
-            <line x1={vpS/2} y1={vpS/2} x2={vpS} y2={vpS/2} stroke={c.divider} strokeWidth="1.5" />
-          </svg>
-          <div style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", width:vpS*0.40, zIndex:2 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:c.productColor, letterSpacing:1, marginBottom:6 }}>{t("vpc.section_products")}</div>
-            <Items items={products} color={c.productColor} maxH={150} />
-          </div>
-          <div style={{ position:"absolute", left:"50%", transform:"translateX(-50%)", top:36, width:vpS*0.52, textAlign:"center", zIndex:2 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:c.creatorColor, letterSpacing:1, marginBottom:6 }}>{t("vpc.section_creators")}</div>
-            <Items items={creators} color={c.creatorColor} maxH={110} />
-          </div>
-          <div style={{ position:"absolute", left:"50%", transform:"translateX(-50%)", bottom:28, width:vpS*0.52, textAlign:"center", zIndex:2 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:c.relieverColor, letterSpacing:1, marginBottom:6 }}>{t("vpc.section_relievers")}</div>
-            <Items items={relievers} color={c.relieverColor} maxH={110} />
-          </div>
+          <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%" }} viewBox={`0 0 ${vpS} ${vpS}`}><line x1={0} y1={0} x2={vpS} y2={vpS} stroke={c.divider} strokeWidth="1.5" /><line x1={vpS} y1={0} x2={0} y2={vpS} stroke={c.divider} strokeWidth="1.5" /><line x1={vpS/2} y1={vpS/2} x2={vpS} y2={vpS/2} stroke={c.divider} strokeWidth="1.5" /></svg>
+          <div style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)", width:vpS*0.40, zIndex:2 }}><div style={{ fontSize:11, fontWeight:700, color:c.productColor, letterSpacing:1, marginBottom:6 }}>{t("vpc.section_products")}</div><Items items={products} color={c.productColor} maxH={150} /></div>
+          <div style={{ position:"absolute", left:"50%", transform:"translateX(-50%)", top:36, width:vpS*0.52, textAlign:"center", zIndex:2 }}><div style={{ fontSize:11, fontWeight:700, color:c.creatorColor, letterSpacing:1, marginBottom:6 }}>{t("vpc.section_creators")}</div><Items items={creators} color={c.creatorColor} maxH={110} /></div>
+          <div style={{ position:"absolute", left:"50%", transform:"translateX(-50%)", bottom:28, width:vpS*0.52, textAlign:"center", zIndex:2 }}><div style={{ fontSize:11, fontWeight:700, color:c.relieverColor, letterSpacing:1, marginBottom:6 }}>{t("vpc.section_relievers")}</div><Items items={relievers} color={c.relieverColor} maxH={110} /></div>
         </div>
-        {/* Arrow */}
         <div style={{ color:c.jobColor, fontSize:24, fontWeight:700, flexShrink:0 }}>⟵⟶</div>
-        {/* CUSTOMER PROFILE circle */}
         <div style={{ position:"relative", width:cpS, height:cpS, flexShrink:0 }}>
           <svg width={cpS} height={cpS} viewBox={`0 0 ${cpS} ${cpS}`} style={{ position:"absolute", inset:0 }}>
-            <path d={arc(60,180)} fill={c.gainColor} opacity="0.20" />
-            <path d={arc(300,420)} fill={c.jobColor} opacity="0.20" />
-            <path d={arc(180,300)} fill={c.painColor} opacity="0.20" />
+            <path d={arc(60,180)} fill={c.gainColor} opacity="0.20" /><path d={arc(300,420)} fill={c.jobColor} opacity="0.20" /><path d={arc(180,300)} fill={c.painColor} opacity="0.20" />
             <line x1={cx} y1={cy} x2={cx+r*Math.cos(div1*Math.PI/180)} y2={cy+r*Math.sin(div1*Math.PI/180)} stroke={c.cpDivider} strokeWidth="1.5" />
             <line x1={cx} y1={cy} x2={cx+r*Math.cos(div2*Math.PI/180)} y2={cy+r*Math.sin(div2*Math.PI/180)} stroke={c.cpDivider} strokeWidth="2" />
             <line x1={cx} y1={cy} x2={cx+r*Math.cos(div3*Math.PI/180)} y2={cy+r*Math.sin(div3*Math.PI/180)} stroke={c.cpDivider} strokeWidth="1.5" />
-            <circle cx={cx} cy={cy} r={r-2} fill="none" stroke={c.cpBorder} strokeWidth="2" />
-            <circle cx={cx} cy={cy} r={16} fill={c.cpBg} stroke={c.cpBorder} strokeWidth="1.5" />
+            <circle cx={cx} cy={cy} r={r-2} fill="none" stroke={c.cpBorder} strokeWidth="2" /><circle cx={cx} cy={cy} r={16} fill={c.cpBg} stroke={c.cpBorder} strokeWidth="1.5" />
           </svg>
           <div style={{ position:"absolute", top:10, left:"50%", transform:"translateX(-50%)", fontSize:12, fontWeight:700, color:c.cpTitle, letterSpacing:2, whiteSpace:"nowrap", zIndex:2 }}>{t("vpc.diagram_cp_title")}</div>
-          <div style={{ position:"absolute", top:40, left:40, width:205, zIndex:2 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:c.gainColor, letterSpacing:1, marginBottom:4 }}>{t("vpc.section_gains")}</div>
-            <Items items={gains} color={c.gainColor} maxH={150} />
-          </div>
-          <div style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", width:175, zIndex:2 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:c.jobColor, letterSpacing:1, marginBottom:4 }}>{t("vpc.customer_jobs")}</div>
-            <Items items={jobs} color={c.jobColor} maxH={150} />
-          </div>
-          <div style={{ position:"absolute", bottom:40, left:40, width:205, zIndex:2 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:c.painColor, letterSpacing:1, marginBottom:4 }}>{t("vpc.section_pains")}</div>
-            <Items items={pains} color={c.painColor} maxH={150} />
-          </div>
+          <div style={{ position:"absolute", top:40, left:40, width:205, zIndex:2 }}><div style={{ fontSize:11, fontWeight:700, color:c.gainColor, letterSpacing:1, marginBottom:4 }}>{t("vpc.section_gains")}</div><Items items={gains} color={c.gainColor} maxH={150} /></div>
+          <div style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", width:175, zIndex:2 }}><div style={{ fontSize:11, fontWeight:700, color:c.jobColor, letterSpacing:1, marginBottom:4 }}>{t("vpc.customer_jobs")}</div><Items items={jobs} color={c.jobColor} maxH={150} /></div>
+          <div style={{ position:"absolute", bottom:40, left:40, width:205, zIndex:2 }}><div style={{ fontSize:11, fontWeight:700, color:c.painColor, letterSpacing:1, marginBottom:4 }}>{t("vpc.section_pains")}</div><Items items={pains} color={c.painColor} maxH={150} /></div>
         </div>
       </div>
     </div>
   );
 }
 
-// ── VPCNetworkInline — connection map ─────────────────────────────────────────
+// ── VPCNetworkInline ──────────────────────────────────────────────────────────
 function VPCNetworkInline({ data, dark }: { data: VPCStructured; dark: boolean }) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
   const [lines, setLines] = useState<{d:string;color:string;key:string;dashed:boolean}[]>([]);
   const [showIndirect, setShowIndirect] = useState(false);
-
-  const products  = data.products;
-  const relievers = data.pain_relievers;
-  const creators  = data.gain_creators;
-  const allPains  = [...data.jobs.flatMap(j => j.pains), ...data.orphan_pains];
-  const allGains  = [...data.jobs.flatMap(j => j.gains), ...data.orphan_gains];
-  const jobs      = data.jobs.map(j => j.job);
-
+  const products=data.products, relievers=data.pain_relievers, creators=data.gain_creators;
+  const allPains=[...data.jobs.flatMap(j=>j.pains),...data.orphan_pains], allGains=[...data.jobs.flatMap(j=>j.gains),...data.orphan_gains], jobs=data.jobs.map(j=>j.job);
   const conns: {from:string;to:string;color:string;dashed?:boolean}[] = [];
-  if (showIndirect) {
-    products.forEach(p => {
-      p.addresses.forEach(job => {
-        relievers.forEach(r => { if (r.addresses.some(a=>a.parent_id===job.id)) conns.push({from:`p_${p.item.id}`,to:`r_${r.item.id}`,color:"#00d4ff"}); });
-        creators.forEach(cr => { if (cr.addresses.some(a=>a.parent_id===job.id)) conns.push({from:`p_${p.item.id}`,to:`c_${cr.item.id}`,color:"#c084fc"}); });
-      });
-    });
-  }
+  if (showIndirect) { products.forEach(p => { p.addresses.forEach(job => { relievers.forEach(r => { if (r.addresses.some(a=>a.parent_id===job.id)) conns.push({from:`p_${p.item.id}`,to:`r_${r.item.id}`,color:"#00d4ff"}); }); creators.forEach(cr => { if (cr.addresses.some(a=>a.parent_id===job.id)) conns.push({from:`p_${p.item.id}`,to:`c_${cr.item.id}`,color:"#c084fc"}); }); }); }); }
   relievers.forEach(r => { r.addresses.forEach(a => conns.push({from:`r_${r.item.id}`,to:`pain_${a.id}`,color:"#ff4466"})); });
   creators.forEach(cr => { cr.addresses.forEach(a => conns.push({from:`c_${cr.item.id}`,to:`gain_${a.id}`,color:"#00ff88"})); });
-
   useEffect(() => {
     const container = containerRef.current; if (!container) return;
     const rect = container.getBoundingClientRect();
     const newLines = conns.flatMap(({from,to,color,dashed},i) => {
-      const a = itemRefs.current.get(from); const b = itemRefs.current.get(to);
-      if (!a||!b) return [];
-      const ar=a.getBoundingClientRect(); const br=b.getBoundingClientRect();
-      const x1=ar.right-rect.left; const y1=ar.top-rect.top+ar.height/2;
-      const x2=br.left-rect.left; const y2=br.top-rect.top+br.height/2;
-      const cx_=(x1+x2)/2;
+      const a = itemRefs.current.get(from); const b = itemRefs.current.get(to); if (!a||!b) return [];
+      const ar=a.getBoundingClientRect(), br=b.getBoundingClientRect();
+      const x1=ar.right-rect.left, y1=ar.top-rect.top+ar.height/2, x2=br.left-rect.left, y2=br.top-rect.top+br.height/2, cx_=(x1+x2)/2;
       return [{key:`${from}-${to}-${i}`,color,dashed:dashed??false,d:`M${x1},${y1} C${cx_},${y1} ${cx_},${y2} ${x2},${y2}`}];
     });
     setLines(newLines);
   });
-
   const setRef=(id:string)=>(el:HTMLDivElement|null)=>{ if(el) itemRefs.current.set(id,el); else itemRefs.current.delete(id); };
-
-  const col = {
-    text:dark?"#c8dce8":"#1a2a3a", sub:dark?"#7899b0":"#5a7080",
-    border:dark?"#0d2535":"#d0dde8", cyan:dark?"#00d4ff":"#0088aa",
-    red:dark?"#ff4466":"#cc3333", green:dark?"#00ff88":"#006e38",
-    selBg:dark?"rgba(0,212,255,0.05)":"rgba(0,136,170,0.05)",
-    selBorder:dark?"rgba(0,212,255,0.25)":"rgba(0,136,170,0.25)",
-  };
-
-  const NetCard = ({refId,color,title,desc,priority}:{refId:string;color:string;title:string;desc:string;priority:number}) => (
-    <div ref={setRef(refId)} style={{ border:`1px solid ${color}44`, borderRadius:3, padding:"6px 8px", marginBottom:5, background:`${color}06` }}>
-      <div style={{ fontSize:9, fontWeight:700, color, marginBottom:2, lineHeight:1.2 }}>{title}</div>
-      <div style={{ fontSize:8, color:col.sub, lineHeight:1.25 }}>{desc.substring(0,65)}{desc.length>65?"…":""}</div>
-      <div style={{ fontSize:7, color:col.sub, marginTop:2, opacity:0.7 }}>P{priority}</div>
-    </div>
-  );
-
+  const dk=dark, col={ text:dk?"#c8dce8":"#1a2a3a", sub:dk?"#7899b0":"#5a7080", border:dk?"#0d2535":"#d0dde8", cyan:dk?"#00d4ff":"#0088aa", red:dk?"#ff4466":"#cc3333", green:dk?"#00ff88":"#006e38" };
+  const NetCard=({refId,color,title,desc,priority}:{refId:string;color:string;title:string;desc:string;priority:number})=>(<div ref={setRef(refId)} style={{ border:`1px solid ${color}44`, borderRadius:3, padding:"6px 8px", marginBottom:5, background:`${color}06` }}><div style={{ fontSize:9, fontWeight:700, color, marginBottom:2 }}>{title}</div><div style={{ fontSize:8, color:col.sub }}>{desc.substring(0,65)}{desc.length>65?"…":""}</div><div style={{ fontSize:7, color:col.sub, marginTop:2 }}>P{priority}</div></div>);
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-      <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap" }}>
-        <button onClick={()=>setShowIndirect(v=>!v)} style={{
-          background:showIndirect?"rgba(192,132,252,0.15)":"rgba(0,212,255,0.05)",
-          border:`1px solid ${showIndirect?"#c084fc":"rgba(0,212,255,0.25)"}`,
-          color:showIndirect?"#c084fc":col.sub,
-          fontFamily:"inherit", fontSize:9, letterSpacing:1, padding:"5px 12px", cursor:"pointer",
-        }}>
-          {showIndirect?"⬡ OCULTAR INDIRETOS":"⬡ EXIBIR INDIRETOS"}
-        </button>
+      <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+        <button onClick={()=>setShowIndirect(v=>!v)} style={{ background:showIndirect?"rgba(192,132,252,0.15)":"rgba(0,212,255,0.05)", border:`1px solid ${showIndirect?"#c084fc":"rgba(0,212,255,0.25)"}`, color:showIndirect?"#c084fc":col.sub, fontFamily:"inherit", fontSize:9, letterSpacing:1, padding:"5px 12px", cursor:"pointer" }}>{showIndirect?"⬡ OCULTAR INDIRETOS":"⬡ EXIBIR INDIRETOS"}</button>
       </div>
       <div ref={containerRef} style={{ position:"relative", display:"grid", gridTemplateColumns:"260px 260px 280px 220px", columnGap:"110px", rowGap:"16px", alignItems:"start" }}>
         <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", pointerEvents:"none", overflow:"visible" }}>
-          <defs>{["00d4ff","ff4466","00ff88","c084fc"].map(c2=>(
-            <marker key={c2} id={`arr-${c2}`} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L6,3 Z" fill={`#${c2}`} opacity="0.8" />
-            </marker>
-          ))}</defs>
-          {lines.map(l=>(
-            <path key={l.key} d={l.d} fill="none" stroke={l.color}
-              strokeWidth={l.dashed?"1":"1.5"} strokeOpacity={l.dashed?"0.35":"0.75"}
-              strokeDasharray={l.dashed?"4,4":undefined}
-              markerEnd={l.dashed?undefined:`url(#arr-${l.color.replace("#","").toLowerCase()})`} />
-          ))}
+          <defs>{["00d4ff","ff4466","00ff88","c084fc"].map(c2=>(<marker key={c2} id={`arr-${c2}`} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 Z" fill={`#${c2}`} opacity="0.8" /></marker>))}</defs>
+          {lines.map(l=>(<path key={l.key} d={l.d} fill="none" stroke={l.color} strokeWidth={l.dashed?"1":"1.5"} strokeOpacity={l.dashed?"0.35":"0.75"} strokeDasharray={l.dashed?"4,4":undefined} markerEnd={l.dashed?undefined:`url(#arr-${l.color.replace("#","").toLowerCase()})`} />))}
         </svg>
-        {/* Products */}
         <div style={{ background:`${col.cyan}06`, border:`1px solid ${col.cyan}22`, borderRadius:6, padding:"12px 14px" }}>
           <div style={{ fontSize:10, fontWeight:700, color:col.cyan, letterSpacing:2, marginBottom:12, borderBottom:`1px solid ${col.cyan}30`, paddingBottom:8 }}>{t("vpc.section_products")}</div>
-          {products.length===0 ? <div style={{ fontSize:9, color:col.sub }}>—</div>
-            : products.map(n=><NetCard key={n.item.id} refId={`p_${n.item.id}`} color={col.cyan} title={n.item.name??n.item.content.substring(0,40)} desc={n.item.content} priority={n.item.priority} />)}
+          {products.length===0?<div style={{ fontSize:9, color:col.sub }}>—</div>:products.map(n=><NetCard key={n.item.id} refId={`p_${n.item.id}`} color={col.cyan} title={n.item.name??n.item.content.substring(0,40)} desc={n.item.content} priority={n.item.priority} />)}
         </div>
-        {/* Pain Relievers + Gain Creators */}
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          <div style={{ background:`${col.red}06`, border:`1px solid ${col.red}22`, borderRadius:6, padding:"12px 14px" }}>
-            <div style={{ fontSize:10, fontWeight:700, color:col.red, letterSpacing:2, marginBottom:12, borderBottom:`1px solid ${col.red}30`, paddingBottom:8 }}>{t("vpc.section_relievers")}</div>
-            {relievers.length===0 ? <div style={{ fontSize:9, color:col.sub }}>—</div>
-              : relievers.map(n=><NetCard key={n.item.id} refId={`r_${n.item.id}`} color={col.red} title={n.item.name??n.item.content.substring(0,40)} desc={n.item.content} priority={n.item.priority} />)}
-          </div>
-          <div style={{ background:`${col.green}06`, border:`1px solid ${col.green}22`, borderRadius:6, padding:"12px 14px" }}>
-            <div style={{ fontSize:10, fontWeight:700, color:col.green, letterSpacing:2, marginBottom:12, borderBottom:`1px solid ${col.green}30`, paddingBottom:8 }}>{t("vpc.section_creators")}</div>
-            {creators.length===0 ? <div style={{ fontSize:9, color:col.sub }}>—</div>
-              : creators.map(n=><NetCard key={n.item.id} refId={`c_${n.item.id}`} color={col.green} title={n.item.name??n.item.content.substring(0,40)} desc={n.item.content} priority={n.item.priority} />)}
-          </div>
+          <div style={{ background:`${col.red}06`, border:`1px solid ${col.red}22`, borderRadius:6, padding:"12px 14px" }}><div style={{ fontSize:10, fontWeight:700, color:col.red, letterSpacing:2, marginBottom:12, borderBottom:`1px solid ${col.red}30`, paddingBottom:8 }}>{t("vpc.section_relievers")}</div>{relievers.length===0?<div style={{ fontSize:9, color:col.sub }}>—</div>:relievers.map(n=><NetCard key={n.item.id} refId={`r_${n.item.id}`} color={col.red} title={n.item.name??n.item.content.substring(0,40)} desc={n.item.content} priority={n.item.priority} />)}</div>
+          <div style={{ background:`${col.green}06`, border:`1px solid ${col.green}22`, borderRadius:6, padding:"12px 14px" }}><div style={{ fontSize:10, fontWeight:700, color:col.green, letterSpacing:2, marginBottom:12, borderBottom:`1px solid ${col.green}30`, paddingBottom:8 }}>{t("vpc.section_creators")}</div>{creators.length===0?<div style={{ fontSize:9, color:col.sub }}>—</div>:creators.map(n=><NetCard key={n.item.id} refId={`c_${n.item.id}`} color={col.green} title={n.item.name??n.item.content.substring(0,40)} desc={n.item.content} priority={n.item.priority} />)}</div>
         </div>
-        {/* Pains + Gains */}
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          <div style={{ background:`${col.red}06`, border:`1px solid ${col.red}22`, borderRadius:6, padding:"12px 14px" }}>
-            <div style={{ fontSize:10, fontWeight:700, color:col.red, letterSpacing:2, marginBottom:12, borderBottom:`1px solid ${col.red}30`, paddingBottom:8 }}>{t("vpc.section_pains")}</div>
-            {allPains.length===0 ? <div style={{ fontSize:9, color:col.sub }}>—</div>
-              : allPains.map((p,i)=>(
-                <div key={p.id} ref={setRef(`pain_${p.id}`)} style={{ display:"flex", gap:8, alignItems:"baseline", marginBottom:6, padding:"4px 8px", borderRadius:3, background:`${col.red}08`, border:`1px solid ${col.red}33` }}>
-                  <span style={{ fontSize:9, fontWeight:700, color:col.red, minWidth:22 }}>P{i+1}</span>
-                  <span style={{ fontSize:9, color:col.text }}>{(p.name??p.content).substring(0,55)}</span>
-                </div>
-              ))}
-          </div>
-          <div style={{ background:`${col.green}06`, border:`1px solid ${col.green}22`, borderRadius:6, padding:"12px 14px" }}>
-            <div style={{ fontSize:10, fontWeight:700, color:col.green, letterSpacing:2, marginBottom:12, borderBottom:`1px solid ${col.green}30`, paddingBottom:8 }}>{t("vpc.section_gains")}</div>
-            {allGains.length===0 ? <div style={{ fontSize:9, color:col.sub }}>—</div>
-              : allGains.map((g,i)=>(
-                <div key={g.id} ref={setRef(`gain_${g.id}`)} style={{ display:"flex", gap:8, alignItems:"baseline", marginBottom:5, padding:"4px 8px", borderRadius:3, background:`${col.green}08`, border:`1px solid ${col.green}33` }}>
-                  <span style={{ fontSize:9, fontWeight:700, color:col.green, minWidth:22 }}>G{i+1}</span>
-                  <span style={{ fontSize:9, color:col.text }}>{(g.name??g.content).substring(0,55)}</span>
-                </div>
-              ))}
-          </div>
+          <div style={{ background:`${col.red}06`, border:`1px solid ${col.red}22`, borderRadius:6, padding:"12px 14px" }}><div style={{ fontSize:10, fontWeight:700, color:col.red, letterSpacing:2, marginBottom:12, borderBottom:`1px solid ${col.red}30`, paddingBottom:8 }}>{t("vpc.section_pains")}</div>{allPains.length===0?<div style={{ fontSize:9, color:col.sub }}>—</div>:allPains.map((p,i)=>(<div key={p.id} ref={setRef(`pain_${p.id}`)} style={{ display:"flex", gap:8, alignItems:"baseline", marginBottom:6, padding:"4px 8px", borderRadius:3, background:`${col.red}08`, border:`1px solid ${col.red}33` }}><span style={{ fontSize:9, fontWeight:700, color:col.red, minWidth:22 }}>P{i+1}</span><span style={{ fontSize:9, color:col.text }}>{(p.name??p.content).substring(0,55)}</span></div>))}</div>
+          <div style={{ background:`${col.green}06`, border:`1px solid ${col.green}22`, borderRadius:6, padding:"12px 14px" }}><div style={{ fontSize:10, fontWeight:700, color:col.green, letterSpacing:2, marginBottom:12, borderBottom:`1px solid ${col.green}30`, paddingBottom:8 }}>{t("vpc.section_gains")}</div>{allGains.length===0?<div style={{ fontSize:9, color:col.sub }}>—</div>:allGains.map((g,i)=>(<div key={g.id} ref={setRef(`gain_${g.id}`)} style={{ display:"flex", gap:8, alignItems:"baseline", marginBottom:5, padding:"4px 8px", borderRadius:3, background:`${col.green}08`, border:`1px solid ${col.green}33` }}><span style={{ fontSize:9, fontWeight:700, color:col.green, minWidth:22 }}>G{i+1}</span><span style={{ fontSize:9, color:col.text }}>{(g.name??g.content).substring(0,55)}</span></div>))}</div>
         </div>
-        {/* Customer Jobs + Legend */}
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          {jobs.length>0&&(
-            <div style={{ background:`${col.cyan}06`, border:`1px solid ${col.cyan}22`, borderRadius:6, padding:"12px 14px" }}>
-              <div style={{ fontSize:10, fontWeight:700, color:col.cyan, letterSpacing:2, marginBottom:10, borderBottom:`1px solid ${col.cyan}30`, paddingBottom:8 }}>{t("vpc.customer_jobs")}</div>
-              {jobs.map(j=>(<div key={j.id} style={{ fontSize:9, color:col.text, marginBottom:6, padding:"4px 8px", borderRadius:3, border:`1px solid ${col.cyan}33` }}>{(j.name??j.content).substring(0,80)}</div>))}
-            </div>
-          )}
+          {jobs.length>0&&(<div style={{ background:`${col.cyan}06`, border:`1px solid ${col.cyan}22`, borderRadius:6, padding:"12px 14px" }}><div style={{ fontSize:10, fontWeight:700, color:col.cyan, letterSpacing:2, marginBottom:10, borderBottom:`1px solid ${col.cyan}30`, paddingBottom:8 }}>{t("vpc.customer_jobs")}</div>{jobs.map(j=>(<div key={j.id} style={{ fontSize:9, color:col.text, marginBottom:6, padding:"4px 8px", borderRadius:3, border:`1px solid ${col.cyan}33` }}>{(j.name??j.content).substring(0,80)}</div>))}</div>)}
           <div style={{ padding:"10px 12px", border:`1px solid ${col.border}`, borderRadius:4 }}>
             <div style={{ fontSize:9, color:col.sub, marginBottom:8, letterSpacing:1 }}>{t("vpc.network_legend")}</div>
-            {[{color:"#00d4ff",label:t("vpc.legend_prod_reliever")},{color:"#c084fc",label:t("vpc.legend_prod_creator")},{color:col.red,label:t("vpc.legend_reliever_pain")},{color:col.green,label:t("vpc.legend_creator_gain")}].map(({color,label})=>(
-              <div key={label} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:5 }}>
-                <svg width="32" height="10" style={{ flexShrink:0 }}><line x1="0" y1="5" x2="26" y2="5" stroke={color} strokeWidth="1.5" /><polygon points="24,2 30,5 24,8" fill={color} opacity="0.8" /></svg>
-                <span style={{ fontSize:8, color:col.sub }}>{label}</span>
-              </div>
-            ))}
+            {[{color:"#00d4ff",label:t("vpc.legend_prod_reliever")},{color:"#c084fc",label:t("vpc.legend_prod_creator")},{color:col.red,label:t("vpc.legend_reliever_pain")},{color:col.green,label:t("vpc.legend_creator_gain")}].map(({color,label})=>(<div key={label} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:5 }}><svg width="32" height="10" style={{ flexShrink:0 }}><line x1="0" y1="5" x2="26" y2="5" stroke={color} strokeWidth="1.5" /><polygon points="24,2 30,5 24,8" fill={color} opacity="0.8" /></svg><span style={{ fontSize:8, color:col.sub }}>{label}</span></div>))}
           </div>
         </div>
       </div>
@@ -688,287 +502,47 @@ function VPCNetworkInline({ data, dark }: { data: VPCStructured; dark: boolean }
   );
 }
 
-// ── Embedded VPC editor (canvas/diagram/network views) ────────────────────────
-function EmbeddedVPC({ canvasId, productId: pid }: { canvasId:string; productId:string }) {
-  const [data, setData] = useState<VPCStructured|null>(null);
-  const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
-  const dark = user?.user_theme !== "light";
-  const [view, setView] = useState<"canvas"|"diagram"|"network">("canvas");
-  const [modal, setModal] = useState<"create"|"edit"|null>(null);
-  const [form, setForm] = useState({ type:"job", name:"", content:"", priority:3, parent_id:"", parent_ids:[] as string[] });
-  const [editId, setEditId] = useState<string|null>(null);
-  const [itemLinks, setItemLinks] = useState<VPCLink[]>([]);
-  const [saving, setSaving] = useState(false);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try { setData(await apiGet<VPCStructured>(`/vpc/canvas/${canvasId}/structured`)); }
-    catch{/**/} finally{setLoading(false);}
-  }, [canvasId]);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  const openCreate = (type:string, parent_id="") => { setForm({ type, name:"", content:"", priority:3, parent_id, parent_ids:[] }); setItemLinks([]); setEditId(null); setModal("create"); };
-
-  const openEdit = async (item:VPCItemSlim) => {
-    let pids:string[] = []; let links:VPCLink[] = [];
-    if (NM_VPC.includes(item.type)) {
-      try { links = await apiGet<VPCLink[]>(`/vpc/items/${item.id}/links`); pids = links.map(l=>l.target_id); } catch{/**/}
-    }
-    setItemLinks(links);
-    setForm({ type:item.type, name:item.name??"", content:item.content, priority:item.priority, parent_id:item.parent_id??"", parent_ids:pids });
-    setEditId(item.id); setModal("edit");
-  };
-
-  const handleSave = async () => {
-    if (!form.content.trim()) return;
-    setSaving(true);
-    try {
-      const body = { ...form, priority:Number(form.priority), parent_id: NM_VPC.includes(form.type) ? null : (form.parent_id||null) };
-      let savedId = editId;
-      if (modal==="create") { const c = await apiPost<{id:string}>("/vpc", { ...body, product_id:pid, canvas_id:canvasId }); savedId = c.id; }
-      else if (editId) { await apiPatch(`/vpc/${editId}`, { name:body.name, content:body.content, priority:body.priority, parent_id:body.parent_id }); }
-      if (savedId && NM_VPC.includes(form.type)) {
-        for (const lnk of itemLinks) { if (!form.parent_ids.includes(lnk.target_id)) { try{await apiDelete(`/vpc/links/${lnk.id}`);}catch{/**/} } }
-        for (const tid of form.parent_ids) { if (!itemLinks.some(l=>l.target_id===tid)) { try{await apiPost("/vpc/links",{canvas_id:canvasId,source_id:savedId,target_id:tid});}catch{/**/} } }
-      }
-      setModal(null); loadData();
-    } catch{/**/} finally{setSaving(false);}
-  };
-
-  const handleDelete = async (id:string) => { if (!confirm("Excluir item?")) return; try{await apiDelete(`/vpc/${id}`);loadData();}catch{/**/} };
-
-  const togglePid = (id:string) => setForm(f=>({ ...f, parent_ids: f.parent_ids.includes(id) ? f.parent_ids.filter(x=>x!==id) : [...f.parent_ids,id] }));
-
-  if (loading || !data) return <div style={{ fontSize:11, color:"#7899b0", padding:"16px 0" }}>CARREGANDO...</div>;
-
-  // Parent options for modal
-  const parentOpts: VPCItemSlim[] = (() => {
-    if (!data) return [];
-    if (form.type==="pain"||form.type==="gain") return data.jobs.map(j=>j.job);
-    if (form.type==="pain_reliever") return [...data.jobs.flatMap(j=>j.pains),...data.orphan_pains];
-    if (form.type==="gain_creator") return [...data.jobs.flatMap(j=>j.gains),...data.orphan_gains];
-    if (form.type==="product") return [...data.jobs.map(j=>j.job),...data.pain_relievers.map(n=>n.item),...data.gain_creators.map(n=>n.item)];
-    return [];
-  })();
-
-  const TypeLabel: Record<string,string> = { job:"Customer Job", pain:"Pain", gain:"Gain", product:"Product/Service", pain_reliever:"Pain Reliever", gain_creator:"Gain Creator" };
-
-  const VCard = ({ item, onEdit, badge }: { item:VPCItemSlim; onEdit:()=>void; badge?:string }) => {
-    const ac = accentVPC(item.type);
-    return (
-      <div className="vpc-card" style={{ border:`1px solid ${ac}22`, marginBottom:6 }}>
-        {badge && <div style={{ fontSize:8, color:ac, marginBottom:3 }}>{badge}</div>}
-        {item.name && <div style={{ fontSize:10, fontWeight:600, color:ac }}>{item.name}</div>}
-        <div style={{ fontSize:10, color:"#c8dce8", cursor:"pointer" }} onClick={onEdit}>{item.content}</div>
-        <div style={{ display:"flex", justifyContent:"space-between", marginTop:4 }}>
-          <span style={{ fontSize:8, color:"#7899b0" }}>P.{item.priority}</span>
-          <div style={{ display:"flex", gap:4 }}>
-            <button className="btn-icon" style={{ fontSize:8, padding:"1px 5px" }} onClick={onEdit}>EDIT</button>
-            <button className="btn-icon btn-icon--danger" style={{ fontSize:8, padding:"1px 5px" }} onClick={()=>handleDelete(item.id)}>DEL</button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const STitle = (label:string, color:string, onAdd?:()=>void) => (
-    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-      <span style={{ color, fontSize:9, letterSpacing:2, fontWeight:600 }}>{label}</span>
-      {onAdd && <button className="btn-icon" style={{ fontSize:8, padding:"2px 6px" }} onClick={onAdd}>+ ADD</button>}
-    </div>
-  );
-
-  return (
-    <div>
-      {/* View switcher */}
-      <div style={{ display:"flex", gap:6, marginBottom:12 }}>
-        {(["canvas","diagram","network"] as const).map(v=>(
-          <button key={v} className={`btn-icon ${view===v?"influence-btn--active":""}`} style={{ fontSize:9 }} onClick={()=>setView(v)}>{v.toUpperCase()}</button>
-        ))}
-        {view==="canvas" && <button className="btn-add" style={{ marginLeft:"auto", fontSize:9 }} onClick={()=>openCreate("job")}>+ NEW JOB</button>}
-      </div>
-
-      {/* CANVAS view */}
-      {view==="canvas" && (
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-          {/* Customer Profile */}
-          <div className="vpc-panel">
-            <div className="vpc-panel__header" style={{ color:"#ff9900" }}>◯ CUSTOMER PROFILE</div>
-            {data.jobs.length===0 && data.orphan_pains.length===0 && data.orphan_gains.length===0 && (
-              <div style={{ fontSize:10, color:"#7899b0", textAlign:"center", padding:16 }}>Add a Customer Job to start</div>
-            )}
-            {data.jobs.map(jn=>(
-              <div key={jn.job.id} className="vpc-job-box">
-                <div style={{ marginBottom:8 }}>
-                  <div style={{ fontSize:9, color:"#00d4ff", letterSpacing:1, marginBottom:3 }}>CUSTOMER JOB</div>
-                  {jn.job.name && <div style={{ fontSize:11, fontWeight:600, color:"#00d4ff" }}>{jn.job.name}</div>}
-                  <div style={{ fontSize:10, color:"#c8dce8" }}>{jn.job.content}</div>
-                  <div style={{ display:"flex", gap:6, marginTop:4 }}>
-                    <button className="btn-icon" style={{ fontSize:8, padding:"1px 5px" }} onClick={()=>openEdit(jn.job)}>EDIT</button>
-                    <button className="btn-icon btn-icon--danger" style={{ fontSize:8, padding:"1px 5px" }} onClick={()=>handleDelete(jn.job.id)}>DEL</button>
-                  </div>
-                </div>
-                <div className="vpc-pains-indent">
-                  {STitle("PAINS","#ff4466",()=>openCreate("pain",jn.job.id))}
-                  {jn.pains.map(p=><VCard key={p.id} item={p} onEdit={()=>openEdit(p)} />)}
-                </div>
-                <div className="vpc-gains-indent">
-                  {STitle("GAINS","#00ff88",()=>openCreate("gain",jn.job.id))}
-                  {jn.gains.map(g=><VCard key={g.id} item={g} onEdit={()=>openEdit(g)} />)}
-                </div>
-              </div>
-            ))}
-            {(data.orphan_pains.length>0||data.orphan_gains.length>0)&&(
-              <div className="vpc-orphan-box">
-                {data.orphan_pains.map(p=><VCard key={p.id} item={p} badge="Pain (no job)" onEdit={()=>openEdit(p)} />)}
-                {data.orphan_gains.map(g=><VCard key={g.id} item={g} badge="Gain (no job)" onEdit={()=>openEdit(g)} />)}
-              </div>
-            )}
-          </div>
-          {/* Value Proposition */}
-          <div className="vpc-panel">
-            <div className="vpc-panel__header" style={{ color:"#00d4ff" }}>▣ VALUE PROPOSITION</div>
-            <div style={{ marginBottom:14 }}>
-              {STitle("PRODUCTS & SERVICES","#00d4ff",()=>openCreate("product"))}
-              {data.products.map(n=><VCard key={n.item.id} item={n.item} badge={n.addresses.map(a=>a.name??a.content.substring(0,30)).join(" · ")||undefined} onEdit={()=>openEdit(n.item)} />)}
-            </div>
-            <div style={{ marginBottom:14 }}>
-              {STitle("PAIN RELIEVERS","#ff4466",()=>openCreate("pain_reliever"))}
-              {data.pain_relievers.map(n=><VCard key={n.item.id} item={n.item} badge={n.addresses.map(a=>a.content.substring(0,25)).join(" · ")||undefined} onEdit={()=>openEdit(n.item)} />)}
-            </div>
-            <div>
-              {STitle("GAIN CREATORS","#00ff88",()=>openCreate("gain_creator"))}
-              {data.gain_creators.map(n=><VCard key={n.item.id} item={n.item} badge={n.addresses.map(a=>a.content.substring(0,25)).join(" · ")||undefined} onEdit={()=>openEdit(n.item)} />)}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DIAGRAM view — full VPCDiagram visual */}
-      {view==="diagram" && <VPCDiagramInline data={data} dark={dark} />}
-
-      {/* NETWORK view — full VPCNetwork connection map */}
-      {view==="network" && <VPCNetworkInline data={data} dark={dark} />}
-
-      {/* Item modal */}
-      {modal && (
-        <div className="mod-overlay" onClick={()=>setModal(null)}>
-          <div className="mod-modal" onClick={e=>e.stopPropagation()}>
-            <div className="mod-modal__header">
-              <div><span className="mod-modal__eyebrow">// VPC //</span><h3 className="mod-modal__title">{modal==="create"?"NEW":"EDIT"} <span>{TypeLabel[form.type]}</span></h3></div>
-              <button className="mod-modal__close" onClick={()=>setModal(null)}>✕</button>
-            </div>
-            <div className="mod-modal__body">
-              {modal==="create" && (
-                <Fld lbl="TYPE">
-                  <select className="mod-select" value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value,parent_id:"",parent_ids:[]}))}>
-                    <optgroup label="— Customer Profile"><option value="job">Customer Job</option><option value="pain">Pain</option><option value="gain">Gain</option></optgroup>
-                    <optgroup label="— Value Proposition"><option value="product">Product / Service</option><option value="pain_reliever">Pain Reliever</option><option value="gain_creator">Gain Creator</option></optgroup>
-                  </select>
-                </Fld>
-              )}
-              {parentOpts.length>0 && !NM_VPC.includes(form.type) && (
-                <Fld lbl="PARENT">
-                  <select className="mod-select" value={form.parent_id} onChange={e=>setForm(f=>({...f,parent_id:e.target.value}))}>
-                    <option value="">— None —</option>
-                    {parentOpts.map(o=><option key={o.id} value={o.id}>{o.name??o.content.substring(0,50)}</option>)}
-                  </select>
-                </Fld>
-              )}
-              {parentOpts.length>0 && NM_VPC.includes(form.type) && (
-                <Fld lbl="LINKS (multiple)">
-                  <div style={{ maxHeight:160, overflowY:"auto", border:"1px solid #1e3a4a", borderRadius:3, padding:"4px 8px" }}>
-                    {parentOpts.map(o=>(
-                      <label key={o.id} style={{ display:"flex", gap:8, alignItems:"center", padding:"3px 0", cursor:"pointer" }}>
-                        <input type="checkbox" checked={form.parent_ids.includes(o.id)} onChange={()=>togglePid(o.id)} style={{ accentColor:"#00d4ff" }} />
-                        <span style={{ fontSize:9, color:"#c8dce8" }}>{o.name??o.content.substring(0,55)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </Fld>
-              )}
-              <Fld lbl="NAME (optional)"><input className="mod-input" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Short reference name" /></Fld>
-              <Fld lbl="CONTENT *"><textarea className="mod-textarea" style={{ minHeight:80 }} value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))} placeholder="Describe..." /></Fld>
-              <Fld lbl="PRIORITY">
-                <div className="influence-grid">{[1,2,3,4,5].map(n=><button key={n} type="button" className={`influence-btn ${form.priority===n?"influence-btn--active":""}`} onClick={()=>setForm(f=>({...f,priority:n}))}>{n}</button>)}</div>
-              </Fld>
-            </div>
-            <div className="mod-modal__footer">
-              <button className="btn-cancel" onClick={()=>setModal(null)}>CANCEL</button>
-              <button className="btn-save" onClick={handleSave} disabled={saving||!form.content.trim()}>{saving?"SAVING...":"SAVE ⟩"}</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── TAB: VPC ─────────────────────────────────────────────────────────────────
+// ─── TAB: VPC (readonly — Diagram/Network + Generate button) ─────────────────
 function TabVPC({ oppId, productId }: { oppId:string; productId:string }) {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const dark = user?.user_theme !== "light";
   const [linked, setLinked] = useState<VPCCanvas[]>([]);
-  const [allCanvases, setAllCanvases] = useState<VPCCanvas[]>([]);
-  const [linkModal, setLinkModal] = useState(false);
-  const [selectedLinkCanvas, setSelectedLinkCanvas] = useState("");
   const [activeCanvasId, setActiveCanvasId] = useState<string>("");
-
+  const [vpcData, setVpcData] = useState<VPCStructured|null>(null);
+  const [vpcView, setVpcView] = useState<"diagram"|"network">("diagram");
+  const [generating, setGenerating] = useState(false);
+  const [genMsg, setGenMsg] = useState("");
   const loadLinked = useCallback(async () => {
-    try { const list = await apiGet<VPCCanvas[]>(`/vpc/canvas?opportunity_id=${oppId}`); setLinked(list); if (list.length>0&&!activeCanvasId) setActiveCanvasId(list[0].id); } catch{/**/}
+    try { const list = await apiGet<VPCCanvas[]>(`/vpc/canvas?opportunity_id=${oppId}`); setLinked(list); if (list.length > 0 && !activeCanvasId) setActiveCanvasId(list[0].id); } catch{/**/}
   }, [oppId]);
-  const loadAll = useCallback(async () => { try { setAllCanvases(await apiGet<VPCCanvas[]>(`/vpc/canvas?product_id=${productId}`)); } catch{/**/} }, [productId]);
   useEffect(() => { loadLinked(); }, [loadLinked]);
-
-  const handleLink = async () => {
-    if (!selectedLinkCanvas) return;
-    try { await apiPatch(`/vpc/canvas/${selectedLinkCanvas}`,{discovery_opportunity_id:oppId}); setLinkModal(false); setSelectedLinkCanvas(""); await loadLinked(); } catch{/**/}
+  useEffect(() => {
+    if (!activeCanvasId) { setVpcData(null); return; }
+    apiGet<VPCStructured>(`/vpc/canvas/${activeCanvasId}/structured`).then(setVpcData).catch(()=>{});
+  }, [activeCanvasId]);
+  const handleGenerate = async () => {
+    if (!confirm("Gerar um VPC a partir dos dados desta oportunidade?")) return;
+    setGenerating(true); setGenMsg("");
+    try { const r = await apiPost<{canvas_id:string;canvas_name:string;items_created:number}>(`/discovery/opportunities/${oppId}/generate-vpc`,{}); setGenMsg(`✓ VPC gerado: "${r.canvas_name}" com ${r.items_created} item(s).`); await loadLinked(); setActiveCanvasId(r.canvas_id); } catch { setGenMsg("⚠ Erro ao gerar o VPC."); } finally { setGenerating(false); }
   };
-  const handleCreate = async () => {
-    try { const c = await apiPost<VPCCanvas>(`/vpc/canvas`,{product_id:productId,name:`Canvas — ${oppId.substring(0,8)}`,discovery_opportunity_id:oppId}); await loadLinked(); setActiveCanvasId(c.id); } catch{/**/}
-  };
-  const unlink = async (cid:string) => {
-    if (!confirm("Desvincular este canvas?")) return;
-    try { await apiPatch(`/vpc/canvas/${cid}`,{discovery_opportunity_id:null}); await loadLinked(); if (activeCanvasId===cid) setActiveCanvasId(linked.find(c=>c.id!==cid)?.id??""); } catch{/**/}
-  };
-
-  const activeCanvas = linked.find(c=>c.id===activeCanvasId);
+  const activeCanvas = linked.find(c => c.id === activeCanvasId);
+  void productId;
   return (
     <div>
       <SecHdr eyebrow={t("discovery.vpc_eyebrow")} />
       <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap", alignItems:"center" }}>
-        <button className="btn-icon" style={{ fontSize:10 }} onClick={()=>{loadAll();setLinkModal(true);}}>{t("discovery.vpc_btn_link")}</button>
-        <button className="btn-icon" style={{ fontSize:10 }} onClick={handleCreate}>{t("discovery.vpc_btn_create")}</button>
-        {linked.length>1 && (
-          <select className="mod-select" style={{ fontSize:10, padding:"4px 10px", minWidth:200 }} value={activeCanvasId} onChange={e=>setActiveCanvasId(e.target.value)}>
-            {linked.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        )}
-        {activeCanvas && <button className="btn-icon btn-icon--danger" style={{ fontSize:9 }} onClick={()=>unlink(activeCanvas.id)}>DESVINCULAR</button>}
+        <button className="btn-add" style={{ fontSize:10 }} onClick={handleGenerate} disabled={generating}>{generating ? "GERANDO..." : "⚡ GERAR VPC DO DISCOVERY"}</button>
+        {activeCanvas && (<button onClick={()=>navigate("/modules/vpc")} style={{ fontSize:10, color:"#00d4ff", background:"transparent", textDecoration:"none", padding:"4px 10px", border:"1px solid rgba(0,212,255,0.3)", borderRadius:2, cursor:"pointer", fontFamily:"inherit", letterSpacing:1 }}>→ ABRIR NO MÓDULO VPC</button>)}
+        {linked.length > 1 && (<select className="mod-select" style={{ fontSize:10, padding:"4px 10px", minWidth:200 }} value={activeCanvasId} onChange={e=>setActiveCanvasId(e.target.value)}>{linked.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>)}
+        {vpcData && (["diagram","network"] as const).map(v=>(<button key={v} className={`btn-icon ${vpcView===v?"influence-btn--active":""}`} style={{ fontSize:9 }} onClick={()=>setVpcView(v)}>{v.toUpperCase()}</button>))}
       </div>
-      {linked.length===0 ? <EmptyItem text={t("discovery.vpc_empty")} /> : (
-        <div>
-          {activeCanvas && <div style={{ marginBottom:8 }}><span style={{ fontSize:11, fontWeight:600, color:"#00d4ff" }}>{activeCanvas.name}</span>{activeCanvas.description&&<span style={{ fontSize:10, color:"#7899b0", marginLeft:8 }}>{activeCanvas.description}</span>}</div>}
-          {activeCanvasId && <EmbeddedVPC canvasId={activeCanvasId} productId={productId} />}
-        </div>
-      )}
-      {linkModal && (
-        <div className="mod-overlay" onClick={()=>setLinkModal(false)}>
-          <div className="mod-modal" style={{ maxWidth:480 }} onClick={e=>e.stopPropagation()}>
-            <div className="mod-modal__header"><div><span className="mod-modal__eyebrow">// VPC //</span><h3 className="mod-modal__title">{t("discovery.vpc_link_title")}</h3></div><button className="mod-modal__close" onClick={()=>setLinkModal(false)}>✕</button></div>
-            <div className="mod-modal__body">
-              <Fld lbl={t("discovery.vpc_select_canvas")}>
-                <select className="mod-select" value={selectedLinkCanvas} onChange={e=>setSelectedLinkCanvas(e.target.value)}>
-                  <option value="">{t("discovery.vpc_no_canvas")}</option>
-                  {allCanvases.filter(c=>!c.discovery_opportunity_id).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </Fld>
-            </div>
-            <div className="mod-modal__footer"><button className="btn-cancel" onClick={()=>setLinkModal(false)}>{t("discovery.btn_cancel")}</button><button className="btn-save" onClick={handleLink} disabled={!selectedLinkCanvas}>{t("discovery.btn_save")}</button></div>
-          </div>
-        </div>
-      )}
+      {genMsg && <div style={{ fontSize:10, color:genMsg.startsWith("✓")?"#00ff88":"#ff4466", marginBottom:12 }}>{genMsg}</div>}
+      {activeCanvas && (<div style={{ marginBottom:10 }}><span style={{ fontSize:11, fontWeight:600, color:"#00d4ff" }}>{activeCanvas.name}</span>{activeCanvas.description && <span style={{ fontSize:10, color:"#7899b0", marginLeft:8 }}>{activeCanvas.description}</span>}</div>)}
+      {linked.length === 0 && <EmptyItem text="Nenhum VPC vinculado. Clique em '⚡ GERAR VPC DO DISCOVERY' para criar automaticamente." />}
+      {vpcData && vpcView === "diagram" && <VPCDiagramInline data={vpcData} dark={dark} />}
+      {vpcData && vpcView === "network" && <VPCNetworkInline data={vpcData} dark={dark} />}
     </div>
   );
 }
@@ -976,7 +550,6 @@ function TabVPC({ oppId, productId }: { oppId:string; productId:string }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────────────────────
-
 const TABS = ["tab_overview","tab_problem","tab_jtbd","tab_research","tab_insights","tab_assumptions","tab_vpc","tab_solutions","tab_experiments","tab_metrics"] as const;
 type TabKey = typeof TABS[number];
 
@@ -984,7 +557,6 @@ export default function DiscoveryPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const dark = user?.user_theme !== "light";
-
   const [productId, setProductId] = useState(localStorage.getItem("pl_product") ?? "");
   const [opps, setOpps] = useState<Opp[]>([]);
   const [selectedOpp, setSelectedOpp] = useState<Opp|null>(null);
@@ -993,73 +565,39 @@ export default function DiscoveryPage() {
   const [oppForm, setOppForm] = useState({ title:"", description:"", origin:"", impacted_area:"", responsible:"", identified_at:"", status:"identified", priority:3 });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
   const loadOpps = useCallback(async (pid=productId) => {
     if (!pid) { setOpps([]); return; }
-    try { setOpps(await apiGet<Opp[]>(`/discovery/opportunities?product_id=${pid}`)); }
-    catch { setError(t("discovery.err_load")); }
+    try { setOpps(await apiGet<Opp[]>(`/discovery/opportunities?product_id=${pid}`)); } catch { setError(t("discovery.err_load")); }
   }, [productId, t]);
-
   useEffect(() => { loadOpps(); }, [loadOpps]);
-
   const handleProductChange = (id:string) => { localStorage.setItem("pl_product",id); setProductId(id); setSelectedOpp(null); };
-
   const openNewOpp = () => { setError(""); setOppForm({ title:"", description:"", origin:"", impacted_area:"", responsible:"", identified_at:"", status:"identified", priority:3 }); setOppModal("new"); };
   const openEditOpp = (o:Opp) => { setError(""); setOppForm({ title:o.title, description:o.description??"", origin:o.origin??"", impacted_area:o.impacted_area??"", responsible:o.responsible??"", identified_at:o.identified_at??"", status:o.status, priority:o.priority }); setOppModal("edit"); };
-
   const saveOpp = async () => {
     if (!oppForm.title.trim()) return;
     setSaving(true);
-    // Convert empty strings to null for Optional fields the backend validates strictly
-    const body = {
-      ...oppForm,
-      identified_at: oppForm.identified_at || null,
-      description:   oppForm.description   || null,
-      origin:        oppForm.origin        || null,
-      impacted_area: oppForm.impacted_area || null,
-      responsible:   oppForm.responsible   || null,
-    };
+    const body = { ...oppForm, identified_at:oppForm.identified_at||null, description:oppForm.description||null, origin:oppForm.origin||null, impacted_area:oppForm.impacted_area||null, responsible:oppForm.responsible||null };
     try {
-      if (oppModal==="new") {
-        const created = await apiPost<Opp>("/discovery/opportunities", { ...body, product_id:Number(productId) });
-        await loadOpps(); setSelectedOpp(created);
-      } else if (selectedOpp) {
-        const updated = await apiPatch<Opp>(`/discovery/opportunities/${selectedOpp.id}`, body);
-        setSelectedOpp(updated); await loadOpps();
-      }
+      if (oppModal==="new") { const created = await apiPost<Opp>("/discovery/opportunities", { ...body, product_id:Number(productId) }); await loadOpps(); setSelectedOpp(created); }
+      else if (selectedOpp) { const updated = await apiPatch<Opp>(`/discovery/opportunities/${selectedOpp.id}`, body); setSelectedOpp(updated); await loadOpps(); }
       setOppModal(null);
     } catch { setError(t("discovery.err_save")); } finally { setSaving(false); }
   };
-
   const deleteOpp = async (id:string) => {
     if (!confirm(t("discovery.confirm_delete_opp"))) return;
     try { await apiDelete(`/discovery/opportunities/${id}`); setSelectedOpp(null); await loadOpps(); } catch{/**/}
   };
-
   const bdr = dark ? "#0d2535" : "#d0dde8";
-
   return (
     <ModuleLayout moduleIcon="◎" moduleName="DISCOVERY MODULE" moduleAccent="MODULE" selectedProductId={productId} onProductChange={handleProductChange}>
-
-      {/* Header */}
       <div className="mod-header">
         <div className="mod-header__left">
           <span className="mod-header__eyebrow">{t("discovery.eyebrow")}</span>
           <h1 className="mod-header__title">{t("discovery.title")} <span>{t("discovery.title_accent")}</span></h1>
         </div>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-          {/* Opportunity selector dropdown */}
           {productId && opps.length > 0 && (
-            <select
-              className="mod-select"
-              style={{ minWidth:280, fontSize:11 }}
-              value={selectedOpp?.id ?? ""}
-              onChange={e => {
-                const found = opps.find(o => o.id === e.target.value);
-                if (found) { setSelectedOpp(found); setActiveTab("tab_overview"); }
-                else setSelectedOpp(null);
-              }}
-            >
+            <select className="mod-select" style={{ minWidth:280, fontSize:11 }} value={selectedOpp?.id ?? ""} onChange={e => { const found = opps.find(o => o.id === e.target.value); if (found) { setSelectedOpp(found); setActiveTab("tab_overview"); } else setSelectedOpp(null); }}>
               <option value="">{t("discovery.select_opp")}</option>
               {opps.map(o => <option key={o.id} value={o.id}>{o.title} [{o.status.replace(/_/g," ").toUpperCase()}]</option>)}
             </select>
@@ -1067,38 +605,22 @@ export default function DiscoveryPage() {
           {productId && <button className="btn-add" onClick={openNewOpp}>{t("discovery.btn_new_opp")}</button>}
         </div>
       </div>
-
       {error && <div className="mod-error">⚠ {error}</div>}
-
       {!productId && <div className="mod-empty"><div className="mod-empty__icon">◎</div><div className="mod-empty__title">{t("discovery.no_product")}</div></div>}
-
-      {productId && opps.length === 0 && (
-        <div className="mod-empty">
-          <div className="mod-empty__icon">◎</div>
-          <div className="mod-empty__title">{t("discovery.sidebar_empty")}</div>
-          <div className="mod-empty__sub">{t("discovery.sidebar_empty_sub")}</div>
-        </div>
-      )}
-
+      {productId && opps.length === 0 && <div className="mod-empty"><div className="mod-empty__icon">◎</div><div className="mod-empty__title">{t("discovery.sidebar_empty")}</div><div className="mod-empty__sub">{t("discovery.sidebar_empty_sub")}</div></div>}
       {productId && opps.length > 0 && (
         <div>
-          {/* Detail */}
           {!selectedOpp ? (
             <div className="mod-empty"><div className="mod-empty__icon">◎</div><div className="mod-empty__title">{t("discovery.select_opp")}</div><div className="mod-empty__sub">{t("discovery.select_opp_sub")}</div></div>
           ) : (
             <div>
-              {/* Tab bar */}
               <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:16, borderBottom:`1px solid ${bdr}`, paddingBottom:8 }}>
-                {TABS.map(tab => (
-                  <button key={tab} className={`btn-icon ${activeTab===tab?"influence-btn--active":""}`} style={{ fontSize:9, padding:"3px 10px" }} onClick={()=>setActiveTab(tab)}>{t(`discovery.${tab}`)}</button>
-                ))}
+                {TABS.map(tab => (<button key={tab} className={`btn-icon ${activeTab===tab?"influence-btn--active":""}`} style={{ fontSize:9, padding:"3px 10px" }} onClick={()=>setActiveTab(tab)}>{t(`discovery.${tab}`)}</button>))}
                 <div style={{ marginLeft:"auto", display:"flex", gap:4 }}>
                   <button className="btn-icon" style={{ fontSize:9 }} onClick={()=>openEditOpp(selectedOpp)}>{t("discovery.btn_edit")}</button>
                   <button className="btn-icon btn-icon--danger" style={{ fontSize:9 }} onClick={()=>deleteOpp(selectedOpp.id)}>{t("discovery.btn_del")}</button>
                 </div>
               </div>
-
-              {/* Tab content */}
               <div style={{ minHeight:400 }}>
                 {activeTab==="tab_overview"    && <TabOverview opp={selectedOpp} onEdit={()=>openEditOpp(selectedOpp)} />}
                 {activeTab==="tab_problem"     && <TabProblem oppId={selectedOpp.id} />}
@@ -1115,8 +637,6 @@ export default function DiscoveryPage() {
           )}
         </div>
       )}
-
-      {/* Opportunity Modal */}
       {oppModal && (
         <ModalShell title={oppModal==="new"?t("discovery.modal_new_opp"):t("discovery.modal_edit_opp")} sub={t("discovery.modal_opp_subtitle")} onClose={()=>setOppModal(null)} onSave={saveOpp} saving={saving}>
           <Fld lbl={t("discovery.field_title")}><input className="mod-input" value={oppForm.title} onChange={e=>setOppForm(p=>({...p,title:e.target.value}))} placeholder={t("discovery.placeholder_title")} /></Fld>
@@ -1125,19 +645,10 @@ export default function DiscoveryPage() {
           <Fld lbl={t("discovery.field_impacted_area")}><input className="mod-input" value={oppForm.impacted_area} onChange={e=>setOppForm(p=>({...p,impacted_area:e.target.value}))} placeholder={t("discovery.placeholder_impacted_area")} /></Fld>
           <Fld lbl={t("discovery.field_responsible")}><input className="mod-input" value={oppForm.responsible} onChange={e=>setOppForm(p=>({...p,responsible:e.target.value}))} placeholder={t("discovery.placeholder_responsible")} /></Fld>
           <Fld lbl={t("discovery.field_identified_at")}><input className="mod-input" type="date" value={oppForm.identified_at} onChange={e=>setOppForm(p=>({...p,identified_at:e.target.value}))} /></Fld>
-          <Fld lbl={t("discovery.field_status")}>
-            <select className="mod-select" value={oppForm.status} onChange={e=>setOppForm(p=>({...p,status:e.target.value}))}>
-              {["identified","under_investigation","validated","paused","discarded","forwarded_to_roadmap"].map(v=>(
-                <option key={v} value={v}>{t(`discovery.opp_status_${v}`)}</option>
-              ))}
-            </select>
-          </Fld>
-          <Fld lbl={t("discovery.field_priority")}>
-            <div className="influence-grid">{[1,2,3,4,5].map(n=><button key={n} type="button" className={`influence-btn ${oppForm.priority===n?"influence-btn--active":""}`} onClick={()=>setOppForm(p=>({...p,priority:n}))}>{n}</button>)}</div>
-          </Fld>
+          <Fld lbl={t("discovery.field_status")}><select className="mod-select" value={oppForm.status} onChange={e=>setOppForm(p=>({...p,status:e.target.value}))}>{["identified","under_investigation","validated","paused","discarded","forwarded_to_roadmap"].map(v=>(<option key={v} value={v}>{t(`discovery.opp_status_${v}`)}</option>))}</select></Fld>
+          <Fld lbl={t("discovery.field_priority")}><div className="influence-grid">{[1,2,3,4,5].map(n=><button key={n} type="button" className={`influence-btn ${oppForm.priority===n?"influence-btn--active":""}`} onClick={()=>setOppForm(p=>({...p,priority:n}))}>{n}</button>)}</div></Fld>
         </ModalShell>
       )}
-
     </ModuleLayout>
   );
 }

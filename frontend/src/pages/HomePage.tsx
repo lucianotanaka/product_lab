@@ -33,6 +33,7 @@ const MODULE_ROUTES: Record<string, string> = {
   roadmap: "/modules/roadmap", prioritization: "/modules/prioritization", risks: "/modules/risks",
   stakeholders: "/modules/stakeholders", backlog: "/modules/backlog",
   research: "/modules/knowledge", communication: "/modules/communication",
+  vpc: "/modules/vpc",
   discovery: "/modules/discovery",
 };
 
@@ -50,6 +51,7 @@ const MODULES: Module[] = [
   { id: "communication",  icon: "◈", status: "ATIVO",   color: "#c084fc" },
   { id: "knowledge",      icon: "◈", status: "ATIVO",   color: "#00e5cc" },
   { id: "research",       icon: "◈", status: "STANDBY", color: "#c084fc" },
+  { id: "vpc",            icon: "⬡", status: "ATIVO",   color: "#c084fc" },
   { id: "discovery",      icon: "◎", status: "ATIVO",   color: "#00e5cc" },
 ];
 
