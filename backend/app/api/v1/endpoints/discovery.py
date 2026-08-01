@@ -9,7 +9,6 @@ from app.repositories.base import BaseRepository
 from app.models.discovery import (
     DiscoveryOpportunity, OpportunityStatus,
     DiscoveryProblemStatement,
-    DiscoveryPersona,
     DiscoveryJTBD, JobType,
     DiscoveryResearch, ResearchType, ReliabilityLevel,
     DiscoveryInsight, ImpactLevel, ConfidenceLevel,
@@ -136,63 +135,7 @@ def upsert_problem_statement(opp_id: str, body: ProblemStatementUpsert, db: Sess
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3. PERSONAS
-# ══════════════════════════════════════════════════════════════════════════════
-
-class PersonaCreate(BaseModel):
-    product_id: int
-    opportunity_id: Optional[str] = None
-    name: str
-    role: Optional[str] = None
-    objectives: Optional[str] = None
-    responsibilities: Optional[str] = None
-    usage_context: Optional[str] = None
-    main_needs: Optional[str] = None
-    constraints: Optional[str] = None
-
-class PersonaUpdate(BaseModel):
-    name: Optional[str] = None
-    role: Optional[str] = None
-    objectives: Optional[str] = None
-    responsibilities: Optional[str] = None
-    usage_context: Optional[str] = None
-    main_needs: Optional[str] = None
-    constraints: Optional[str] = None
-    opportunity_id: Optional[str] = None
-
-class PersonaOut(BaseModel):
-    id: str; product_id: int; opportunity_id: Optional[str] = None
-    name: str; role: Optional[str] = None
-    objectives: Optional[str] = None; responsibilities: Optional[str] = None
-    usage_context: Optional[str] = None; main_needs: Optional[str] = None
-    constraints: Optional[str] = None
-    created_at: datetime; updated_at: datetime
-    class Config: from_attributes = True
-
-@router.get("/opportunities/{opp_id}/personas", response_model=list[PersonaOut])
-def list_personas(opp_id: str, db: Session = Depends(get_db)):
-    _get_or_404(DiscoveryOpportunity, opp_id, db)
-    rows = db.query(DiscoveryPersona).filter(DiscoveryPersona.opportunity_id == opp_id).all()
-    return [PersonaOut.model_validate(r) for r in rows]
-
-@router.post("/opportunities/{opp_id}/personas", response_model=PersonaOut, status_code=status.HTTP_201_CREATED)
-def create_persona(opp_id: str, body: PersonaCreate, db: Session = Depends(get_db)):
-    _get_or_404(DiscoveryOpportunity, opp_id, db)
-    data = body.model_dump(); data["opportunity_id"] = opp_id
-    return BaseRepository(DiscoveryPersona, db).create(data)
-
-@router.patch("/personas/{id}", response_model=PersonaOut)
-def update_persona(id: str, body: PersonaUpdate, db: Session = Depends(get_db)):
-    repo = BaseRepository(DiscoveryPersona, db)
-    return repo.update(_get_or_404(DiscoveryPersona, id, db), body.model_dump(exclude_unset=True))
-
-@router.delete("/personas/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_persona(id: str, db: Session = Depends(get_db)):
-    BaseRepository(DiscoveryPersona, db).delete(_get_or_404(DiscoveryPersona, id, db))
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# 4. JTBD
+# 3. JTBD
 # ══════════════════════════════════════════════════════════════════════════════
 
 class JTBDCreate(BaseModel):

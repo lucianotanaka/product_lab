@@ -17,12 +17,13 @@ class VPCType(str, Enum):
 
 class VPCCanvas(Base):
     __tablename__ = "vpc_canvas"
-    id          = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    product_id  = Column(String(36), nullable=False, index=True)
-    name        = Column(String(150), nullable=False, default="Canvas Principal")
-    description = Column(Text, nullable=True)
-    created_at  = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    id                       = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    product_id               = Column(String(36), nullable=False, index=True)
+    name                     = Column(String(150), nullable=False, default="Canvas Principal")
+    description              = Column(Text, nullable=True)
+    discovery_opportunity_id = Column(String(36), nullable=True, index=True)  # FK → discovery_opportunities
+    created_at               = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at               = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class VPCItem(Base):

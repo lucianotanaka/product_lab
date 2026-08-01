@@ -152,26 +152,6 @@ class DiscoveryProblemStatement(Base):
     updated_at              = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
-# ─── Table 3: discovery_personas ─────────────────────────────────────────────
-
-class DiscoveryPersona(Base):
-    """Functional profile of the user/customer the solution is built for."""
-    __tablename__ = "discovery_personas"
-
-    id               = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    product_id       = Column(Integer, nullable=False, index=True)
-    opportunity_id   = Column(String(36), nullable=True, index=True)
-    name             = Column(String(150), nullable=False)
-    role             = Column(String(150))
-    objectives       = Column(Text)
-    responsibilities = Column(Text)
-    usage_context    = Column(Text)
-    main_needs       = Column(Text)
-    constraints      = Column(Text)
-    created_at       = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at       = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-
 # ─── Table 4: discovery_jtbd ──────────────────────────────────────────────────
 
 class DiscoveryJTBD(Base):

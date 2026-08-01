@@ -31,7 +31,7 @@ interface SystemStats {
 const MODULE_ROUTES: Record<string, string> = {
   dashboard: "/modules/products", knowledge: "/modules/knowledge", decisions: "/modules/decisions",
   roadmap: "/modules/roadmap", prioritization: "/modules/prioritization", risks: "/modules/risks",
-  stakeholders: "/modules/stakeholders", vpc: "/modules/vpc", backlog: "/modules/backlog",
+  stakeholders: "/modules/stakeholders", backlog: "/modules/backlog",
   research: "/modules/knowledge", communication: "/modules/communication",
   discovery: "/modules/discovery",
 };
@@ -49,7 +49,6 @@ const MODULES: Module[] = [
   { id: "stakeholders",   icon: "◉", status: "ATIVO",   color: "#00ff88" },
   { id: "communication",  icon: "◈", status: "ATIVO",   color: "#c084fc" },
   { id: "knowledge",      icon: "◈", status: "ATIVO",   color: "#00e5cc" },
-  { id: "vpc",            icon: "⬡", status: "ATIVO",   color: "#00d4ff" },
   { id: "research",       icon: "◈", status: "STANDBY", color: "#c084fc" },
   { id: "discovery",      icon: "◎", status: "ATIVO",   color: "#00e5cc" },
 ];

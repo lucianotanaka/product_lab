@@ -1,5 +1,5 @@
 from .discovery import (
-    DiscoveryOpportunity, DiscoveryProblemStatement, DiscoveryPersona,
+    DiscoveryOpportunity, DiscoveryProblemStatement,
     DiscoveryJTBD, DiscoveryResearch, DiscoveryInsight, DiscoveryAssumption,
     DiscoverySolutionIdea, DiscoveryExperiment, DiscoverySuccessMetric,
 )
@@ -13,7 +13,7 @@ from .roadmap import RoadmapItem
 from .stakeholder import Stakeholder, StakeholderProduct
 from .vpc import VPCItem
 from .backlog import BacklogItem, BacklogItemType, BacklogItemSuggestion
-from .product_structure import ProductCapability, ProductFeature, ProductImpact, ValuePropositionCanvas
+from .product_structure import ProductCapability, ProductFeature, ProductImpact
 from .communication import (
     CommunicationType, CommunicationTemplate, TemplateSection,
     Communication, CommunicationSchedule,
@@ -25,7 +25,7 @@ from .communication import (
 
 __all__ = [
     # Discovery
-    "DiscoveryOpportunity", "DiscoveryProblemStatement", "DiscoveryPersona",
+    "DiscoveryOpportunity", "DiscoveryProblemStatement",
     "DiscoveryJTBD", "DiscoveryResearch", "DiscoveryInsight", "DiscoveryAssumption",
     "DiscoverySolutionIdea", "DiscoveryExperiment", "DiscoverySuccessMetric",
     # Core
@@ -33,7 +33,7 @@ __all__ = [
     "KnowledgeArticle", "KnowledgeReference",
     "PrioritizationItem", "Risk", "RoadmapItem", "Stakeholder", "VPCItem",
     "BacklogItem", "BacklogItemType", "BacklogItemSuggestion",
-    "ProductCapability", "ProductFeature", "ProductImpact", "ValuePropositionCanvas",
+    "ProductCapability", "ProductFeature", "ProductImpact",
     "StakeholderProduct",
     # Communication Domain
     "CommunicationType", "CommunicationTemplate", "TemplateSection",

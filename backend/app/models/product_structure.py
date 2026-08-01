@@ -50,18 +50,3 @@ class ProductImpact(Base):
     evidence_notes   = Column(Text)
     created_at       = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at       = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-
-class ValuePropositionCanvas(Base):
-    """Canvas de proposta de valor (entidade principal do VPC no banco)."""
-    __tablename__ = "value_proposition_canvas"
-    vpc_id           = Column(Integer, primary_key=True, autoincrement=True)
-    target_segment   = Column(String(150), nullable=False)
-    jobs_to_be_done  = Column(Text)
-    pains            = Column(Text)
-    gains            = Column(Text)
-    products_services= Column(Text)
-    pain_relievers   = Column(Text)
-    gain_creators    = Column(Text)
-    created_at       = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at       = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
