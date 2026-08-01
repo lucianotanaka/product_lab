@@ -14,13 +14,16 @@ class VPCCanvasCreate(BaseModel):
     product_id: str
     name: str = "Canvas Principal"
     description: Optional[str] = None
+    discovery_opportunity_id: Optional[str] = None
 
 class VPCCanvasUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    discovery_opportunity_id: Optional[str] = None
 
 class VPCCanvasOut(BaseModel):
     id: str; product_id: str; name: str; description: Optional[str] = None
+    discovery_opportunity_id: Optional[str] = None
     created_at: datetime; updated_at: datetime
     class Config: from_attributes = True
 
@@ -105,9 +108,17 @@ router = APIRouter()
 # ── Canvas endpoints ──────────────────────────────────────────────────────────
 
 @router.get("/canvas", response_model=list[VPCCanvasOut])
-def list_canvases(product_id: Optional[str] = None, db: Session = Depends(get_db)):
-    repo = BaseRepository(VPCCanvas, db)
-    _, canvases = repo.list(skip=0, limit=200, **({"product_id": product_id} if product_id else {}))
+def list_canvases(
+    product_id: Optional[str] = None,
+    opportunity_id: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    q = db.query(VPCCanvas)
+    if product_id:    q = q.filter(VPCCanvas.product_id == product_id)
+    if opportunity_id:
+        # Filter canvases linked to a specific Discovery opportunity
+        q = q.filter(VPCCanvas.discovery_opportunity_id == opportunity_id)
+    canvases = q.order_by(VPCCanvas.created_at).all()
     return [VPCCanvasOut.model_validate(c) for c in canvases]
 
 @router.post("/canvas", response_model=VPCCanvasOut, status_code=status.HTTP_201_CREATED)

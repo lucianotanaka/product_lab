@@ -1,3 +1,8 @@
+from .discovery import (
+    DiscoveryOpportunity, DiscoveryProblemStatement, DiscoveryPersona,
+    DiscoveryJTBD, DiscoveryResearch, DiscoveryInsight, DiscoveryAssumption,
+    DiscoverySolutionIdea, DiscoveryExperiment, DiscoverySuccessMetric,
+)
 from .user import User
 from .product import Product
 from .decision import Decision
@@ -19,6 +24,11 @@ from .communication import (
 )
 
 __all__ = [
+    # Discovery
+    "DiscoveryOpportunity", "DiscoveryProblemStatement", "DiscoveryPersona",
+    "DiscoveryJTBD", "DiscoveryResearch", "DiscoveryInsight", "DiscoveryAssumption",
+    "DiscoverySolutionIdea", "DiscoveryExperiment", "DiscoverySuccessMetric",
+    # Core
     "User", "Product", "Decision",
     "KnowledgeArticle", "KnowledgeReference",
     "PrioritizationItem", "Risk", "RoadmapItem", "Stakeholder", "VPCItem",

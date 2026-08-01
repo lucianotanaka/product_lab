@@ -181,6 +181,21 @@ def run_migrations():
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_tmp_product ON team_member_products(product_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_tmp_member  ON team_member_products(member_id)"))
 
+        # ── Discovery module ──────────────────────────────────────────────────
+        # Idempotent: tables already created via DDL, but kept here for parity
+        conn.execute(text("ALTER TABLE risks ADD COLUMN IF NOT EXISTS discovery_opportunity_id VARCHAR(36)"))
+        conn.execute(text("ALTER TABLE risks ADD COLUMN IF NOT EXISTS category VARCHAR(100)"))
+        conn.execute(text("ALTER TABLE risks ADD COLUMN IF NOT EXISTS responsible VARCHAR(150)"))
+        conn.execute(text("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS discovery_opportunity_id VARCHAR(36)"))
+        conn.execute(text("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS evidence_refs TEXT"))
+        conn.execute(text("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS approved_scope TEXT"))
+        conn.execute(text("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS responsible VARCHAR(300)"))
+        conn.execute(text("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS decision_date TIMESTAMP"))
+        conn.execute(text("ALTER TABLE vpc_canvas ADD COLUMN IF NOT EXISTS discovery_opportunity_id VARCHAR(36)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_risks_disco_opp ON risks(discovery_opportunity_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_decisions_disco_opp ON decisions(discovery_opportunity_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_vpc_canvas_disco_opp ON vpc_canvas(discovery_opportunity_id)"))
+
         # Communication Domain — tabelas criadas via DDL v1.0 (já existem no banco)
         # audience_members — vincula stakeholders a audiências
         conn.execute(text("""

@@ -11,6 +11,7 @@ import RisksPage from "./modules/risks/pages/RisksPage";
 import RoadmapPage from "./modules/roadmap/pages/RoadmapPage";
 import StakeholdersPage from "./modules/stakeholders/pages/StakeholdersPage";
 import VPCPage from "./modules/vpc/pages/VPCPage";
+import DiscoveryPage from "./modules/discovery/pages/DiscoveryPage";
 import BacklogPage from "./modules/backlog/pages/BacklogPage";
 import CommunicationPage from "./modules/communication/pages/CommunicationPage";
 import UsersPage from "./modules/users/pages/UsersPage";
@@ -68,6 +69,7 @@ function AppRoutes() {
       <Route path="/modules/roadmap" element={<P component={RoadmapPage} />} />
       <Route path="/modules/stakeholders" element={<P component={StakeholdersPage} />} />
       <Route path="/modules/vpc" element={<P component={VPCPage} />} />
+      <Route path="/modules/discovery" element={<P component={DiscoveryPage} />} />
       <Route path="/modules/backlog" element={<P component={BacklogPage} />} />
       <Route path="/modules/communication" element={<P component={CommunicationPage} />} />
       {/* Admin-only */}
