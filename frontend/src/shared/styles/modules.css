@@ -476,7 +476,100 @@
   color: #00d4ff;
 }
 
-/* VPC Canvas layout */
+/* ── VPC v2 — Hierarchical Canvas ─────────────────────────────────────────── */
+.vpc-panel {
+  border: 1px solid #1e3a4a;
+  border-radius: 6px;
+  padding: 14px;
+  min-height: 300px;
+}
+[data-theme="light"] .vpc-panel {
+  border-color: rgba(0,136,170,0.15);
+  background: rgba(255,255,255,0.65);
+}
+
+.vpc-panel__header {
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 14px;
+  text-align: center;
+  border-bottom: 1px solid #1e3a4a;
+  padding-bottom: 8px;
+}
+[data-theme="light"] .vpc-panel__header {
+  border-bottom-color: rgba(0,136,170,0.12);
+}
+
+.vpc-job-box {
+  margin-bottom: 16px;
+  border: 1px solid rgba(0,212,255,0.13);
+  border-radius: 5px;
+  padding: 10px;
+}
+[data-theme="light"] .vpc-job-box {
+  border-color: rgba(0,136,170,0.15);
+  background: rgba(0,136,170,0.03);
+}
+
+.vpc-job-text {
+  font-size: 10px;
+  color: #e0eef6;
+  line-height: 1.5;
+}
+[data-theme="light"] .vpc-job-text { color: #1a2a3a; }
+
+.vpc-job-text--muted { font-size: 10px; color: #7899b0; }
+[data-theme="light"] .vpc-job-text--muted { color: #5a7080; }
+
+.vpc-pains-indent {
+  margin-left: 12px;
+  border-left: 2px solid rgba(255,68,102,0.2);
+  padding-left: 10px;
+  margin-bottom: 6px;
+}
+[data-theme="light"] .vpc-pains-indent { border-left-color: rgba(204,51,51,0.25); }
+
+.vpc-gains-indent {
+  margin-left: 12px;
+  border-left: 2px solid rgba(0,255,136,0.2);
+  padding-left: 10px;
+}
+[data-theme="light"] .vpc-gains-indent { border-left-color: rgba(0,110,56,0.25); }
+
+.vpc-orphan-box {
+  border: 1px solid rgba(255,153,0,0.2);
+  border-radius: 5px;
+  padding: 10px;
+  margin-top: 8px;
+}
+[data-theme="light"] .vpc-orphan-box {
+  border-color: rgba(184,92,0,0.2);
+  background: rgba(184,92,0,0.02);
+}
+
+.vpc-card {
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: #0a1e2a;
+}
+[data-theme="light"] .vpc-card {
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+}
+
+.vpc-card__text {
+  font-size: 10px;
+  line-height: 1.5;
+  cursor: pointer;
+  color: #c8dce8;
+}
+[data-theme="light"] .vpc-card__text { color: #2a3a4a; }
+
+.vpc-card__text--muted { font-size: 10px; color: #7899b0; }
+[data-theme="light"] .vpc-card__text--muted { color: #5a7080; }
+
+/* ── VPC Canvas layout (legacy v1) ─────────────────────────────────────────── */
 .vpc-canvas {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

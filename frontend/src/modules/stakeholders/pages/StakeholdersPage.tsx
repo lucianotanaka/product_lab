@@ -80,10 +80,12 @@ export default function StakeholdersPage() {
       .then(r => setProducts(r.items)).catch(() => {});
   }, []);
 
-  const load = async (p = page) => {
+  // overridePid: undefined = use current pid, null = force no filter (used after create)
+  const load = async (p = page, overridePid?: number | null) => {
     setLoading(true); setError("");
     try {
-      const qs = `page=${p}&size=${SIZE}${pid ? `&product_id=${pid}` : ""}`;
+      const effectivePid = overridePid === null ? undefined : (overridePid ?? pid);
+      const qs = `page=${p}&size=${SIZE}${effectivePid ? `&product_id=${effectivePid}` : ""}`;
       const r = await apiGet<Paginated<Stakeholder>>(`/stakeholders?${qs}`);
       setItems(r.items); setTotal(r.total);
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Erro ao carregar"); }
@@ -107,9 +109,19 @@ export default function StakeholdersPage() {
     if (!form.full_name.trim()) return;
     setSaving(true);
     try {
-      if (modal === "create") await apiPost("/stakeholders", form);
-      else if (editing)       await apiPatch(`/stakeholders/${editing.stakeholder_id}`, form);
-      closeModal(); load(page);
+      if (modal === "create") {
+        // After creation the new stakeholder has no product association yet,
+        // so we must reload page 1 WITHOUT the product filter — otherwise the
+        // inner-join on StakeholderProduct excludes it and it never appears.
+        await apiPost("/stakeholders", form);
+        closeModal();
+        setPage(1);
+        load(1, null);
+      } else if (editing) {
+        await apiPatch(`/stakeholders/${editing.stakeholder_id}`, form);
+        closeModal();
+        load(page);
+      }
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Erro ao salvar"); }
     finally { setSaving(false); }
   };
