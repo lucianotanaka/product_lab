@@ -62,6 +62,8 @@
       "backlog":        { "title": "Backlog",          "desc": "Gestión de user stories, tasks, bugs y epics con story points y criterios de aceptación." },
       "communication":  { "title": "Comunicación",    "desc": "Gestión de comunicaciones, anuncios, newsletters y actualizaciones de estado para stakeholders." },
       "discovery":      { "title": "Discovery",        "desc": "Donde las oportunidades nacen, se investigan, validan y preparan para el Roadmap y el Backlog." },
+      "requirements":   { "title": "Requirements",     "desc": "Gestión de requisitos de negocio, funcionales y no funcionales con trazabilidad, priorización y verificación." },
+      "process_mapping":{ "title": "Process Mapping",  "desc": "Mapeo visual de procesos AS-IS y TO-BE con nodos, conexiones y trazabilidad a requisitos y features." },
       "users":          { "title": "Gestión de Usuarios", "desc": "Crear, editar, activar/desactivar usuarios y generar tokens de reset de contraseña. Solo administradores." }
     },
     "status_active": "ACTIVO",

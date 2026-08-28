@@ -15,6 +15,8 @@ import DiscoveryPage from "./modules/discovery/pages/DiscoveryPage";
 import BacklogPage from "./modules/backlog/pages/BacklogPage";
 import CommunicationPage from "./modules/communication/pages/CommunicationPage";
 import UsersPage from "./modules/users/pages/UsersPage";
+import RequirementsPage from "./modules/requirements/pages/RequirementsPage";
+import ProcessMappingPage from "./modules/process_mapping/pages/ProcessMappingPage";
 
 // ─── Protected Route ──────────────────────────────────────────────────────────
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -72,6 +74,8 @@ function AppRoutes() {
       <Route path="/modules/discovery" element={<P component={DiscoveryPage} />} />
       <Route path="/modules/backlog" element={<P component={BacklogPage} />} />
       <Route path="/modules/communication" element={<P component={CommunicationPage} />} />
+      <Route path="/modules/requirements" element={<P component={RequirementsPage} />} />
+      <Route path="/modules/process-mapping" element={<P component={ProcessMappingPage} />} />
       {/* Admin-only */}
       <Route path="/admin/users" element={<A component={UsersPage} />} />
       {/* Catch-all → login */}

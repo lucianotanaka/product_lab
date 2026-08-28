@@ -211,6 +211,163 @@ def run_migrations():
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_audience_members_audience ON audience_members(audience_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_audience_members_stakeholder ON audience_members(stakeholder_id)"))
 
+        # ── Requirements Management ───────────────────────────────────────────
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS requirements (
+                id                      SERIAL PRIMARY KEY,
+                product_id              INTEGER,
+                business_area_id        INTEGER,
+                requirement_code        VARCHAR(50) NOT NULL,
+                requirement_title       VARCHAR(250) NOT NULL,
+                requirement_description TEXT NOT NULL,
+                requirement_type        VARCHAR(30) NOT NULL DEFAULT 'FUNCTIONAL',
+                requirement_source      VARCHAR(100),
+                priority                VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
+                lifecycle_status        VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+                fulfillment_status      VARCHAR(30) NOT NULL DEFAULT 'NOT_STARTED',
+                acceptance_definition   TEXT,
+                requirement_owner       VARCHAR(150),
+                created_by              INTEGER,
+                created_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_by              INTEGER,
+                updated_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                is_deleted              BOOLEAN NOT NULL DEFAULT FALSE,
+                CONSTRAINT uq_requirement_code UNIQUE (product_id, requirement_code)
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_req_product ON requirements(product_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_req_lifecycle ON requirements(lifecycle_status)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_req_type ON requirements(requirement_type)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS requirement_features (
+                id              SERIAL PRIMARY KEY,
+                requirement_id  INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+                feature_id      INTEGER NOT NULL,
+                coverage_type   VARCHAR(20) NOT NULL DEFAULT 'PRIMARY',
+                notes           TEXT,
+                created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT uq_req_feature UNIQUE (requirement_id, feature_id)
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_req_feat_req ON requirement_features(requirement_id)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS requirement_user_stories (
+                id                  SERIAL PRIMARY KEY,
+                requirement_id      INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+                user_story_id       INTEGER NOT NULL,
+                coverage_percentage NUMERIC(5,2),
+                coverage_status     VARCHAR(20) NOT NULL DEFAULT 'NOT_STARTED',
+                notes               TEXT,
+                created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT uq_req_userstory UNIQUE (requirement_id, user_story_id)
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_req_us_req ON requirement_user_stories(requirement_id)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS requirement_relations (
+                id              SERIAL PRIMARY KEY,
+                requirement_id  INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+                entity_type     VARCHAR(30) NOT NULL,
+                entity_id       INTEGER NOT NULL,
+                relation_type   VARCHAR(50),
+                notes           TEXT,
+                created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_req_rel_req ON requirement_relations(requirement_id)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS requirement_verifications (
+                id                  SERIAL PRIMARY KEY,
+                requirement_id      INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+                verification_type   VARCHAR(30) NOT NULL,
+                verification_result VARCHAR(20) NOT NULL DEFAULT 'NOT_VERIFIED',
+                verified_by         INTEGER,
+                verified_at         TIMESTAMP,
+                evidence            TEXT,
+                notes               TEXT,
+                created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_req_ver_req ON requirement_verifications(requirement_id)"))
+
+        # ── Process Mapping ───────────────────────────────────────────────────
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS processes (
+                id                  SERIAL PRIMARY KEY,
+                product_id          INTEGER,
+                business_area_id    INTEGER,
+                process_name        VARCHAR(200) NOT NULL,
+                process_description TEXT,
+                process_version     VARCHAR(30) NOT NULL DEFAULT '1.0',
+                process_type        VARCHAR(20) NOT NULL DEFAULT 'AS_IS',
+                process_status      VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+                process_owner       VARCHAR(150),
+                process_trigger     TEXT,
+                process_outcome     TEXT,
+                created_by          INTEGER,
+                created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_by          INTEGER,
+                updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                is_deleted          BOOLEAN NOT NULL DEFAULT FALSE
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_proc_product ON processes(product_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_proc_status ON processes(process_status)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS process_nodes (
+                id               SERIAL PRIMARY KEY,
+                process_id       INTEGER NOT NULL REFERENCES processes(id) ON DELETE CASCADE,
+                node_type        VARCHAR(30) NOT NULL,
+                node_title       VARCHAR(200) NOT NULL,
+                node_description TEXT,
+                role_name        VARCHAR(150),
+                business_area_id INTEGER,
+                system_name      VARCHAR(150),
+                duration_minutes NUMERIC(12,2),
+                is_manual        BOOLEAN NOT NULL DEFAULT FALSE,
+                is_bottleneck    BOOLEAN NOT NULL DEFAULT FALSE,
+                x_position       NUMERIC(12,2) NOT NULL DEFAULT 0,
+                y_position       NUMERIC(12,2) NOT NULL DEFAULT 0,
+                width            NUMERIC(12,2),
+                height           NUMERIC(12,2),
+                display_order    INTEGER,
+                created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_pnode_process ON process_nodes(process_id)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS process_edges (
+                id                   SERIAL PRIMARY KEY,
+                process_id           INTEGER NOT NULL REFERENCES processes(id) ON DELETE CASCADE,
+                source_node_id       INTEGER NOT NULL REFERENCES process_nodes(id) ON DELETE CASCADE,
+                target_node_id       INTEGER NOT NULL REFERENCES process_nodes(id) ON DELETE CASCADE,
+                edge_label           VARCHAR(150),
+                edge_type            VARCHAR(20) NOT NULL DEFAULT 'SEQUENCE',
+                condition_expression TEXT,
+                sequence_order       INTEGER,
+                created_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT chk_edge_nodes CHECK (source_node_id <> target_node_id)
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_pedge_process ON process_edges(process_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_pedge_source  ON process_edges(source_node_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_pedge_target  ON process_edges(target_node_id)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS process_node_relations (
+                id            SERIAL PRIMARY KEY,
+                node_id       INTEGER NOT NULL REFERENCES process_nodes(id) ON DELETE CASCADE,
+                entity_type   VARCHAR(30) NOT NULL,
+                entity_id     INTEGER NOT NULL,
+                relation_type VARCHAR(50),
+                notes         TEXT,
+                created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_pnrel_node ON process_node_relations(node_id)"))
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,

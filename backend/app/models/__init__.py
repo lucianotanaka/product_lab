@@ -1,3 +1,10 @@
+from .requirement import (
+    Requirement, RequirementFeature, RequirementUserStory,
+    RequirementRelation, RequirementVerification,
+)
+from .process_mapping import (
+    Process, ProcessNode, ProcessEdge, ProcessNodeRelation,
+)
 from .discovery import (
     DiscoveryOpportunity, DiscoveryProblemStatement,
     DiscoveryJTBD, DiscoveryResearch, DiscoveryInsight, DiscoveryAssumption,
@@ -24,6 +31,11 @@ from .communication import (
 )
 
 __all__ = [
+    # Requirements Management
+    "Requirement", "RequirementFeature", "RequirementUserStory",
+    "RequirementRelation", "RequirementVerification",
+    # Process Mapping
+    "Process", "ProcessNode", "ProcessEdge", "ProcessNodeRelation",
     # Discovery
     "DiscoveryOpportunity", "DiscoveryProblemStatement",
     "DiscoveryJTBD", "DiscoveryResearch", "DiscoveryInsight", "DiscoveryAssumption",

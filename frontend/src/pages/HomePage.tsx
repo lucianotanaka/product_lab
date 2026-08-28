@@ -35,6 +35,8 @@ const MODULE_ROUTES: Record<string, string> = {
   research: "/modules/knowledge", communication: "/modules/communication",
   vpc: "/modules/vpc",
   discovery: "/modules/discovery",
+  requirements: "/modules/requirements",
+  process_mapping: "/modules/process-mapping",
 };
 
 interface Module { id: string; icon: string; status: "ATIVO" | "SYNC" | "STANDBY"; color: string; }
@@ -53,6 +55,8 @@ const MODULES: Module[] = [
   { id: "research",       icon: "◈", status: "STANDBY", color: "#c084fc" },
   { id: "vpc",            icon: "⬡", status: "ATIVO",   color: "#c084fc" },
   { id: "discovery",      icon: "◎", status: "ATIVO",   color: "#00e5cc" },
+  { id: "requirements",   icon: "◫", status: "ATIVO",   color: "#00e5cc" },
+  { id: "process_mapping",icon: "⬡", status: "ATIVO",   color: "#c084fc" },
 ];
 
 const DEFAULT_MODULE_ORDER = MODULES.map(m => m.id);

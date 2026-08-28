@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "2.0.5-4-gef945fe",
+  "version": "2.0.5-5-gbac59bd",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
+    "@xyflow/react": "^12.11.5",
     "axios": "^1.18.1",
     "i18next": "^26.3.6",
     "react": "^19.2.7",

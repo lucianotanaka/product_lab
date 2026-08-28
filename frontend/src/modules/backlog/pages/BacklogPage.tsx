@@ -58,6 +58,7 @@ const TEAM_ROLES = [
   "QA Engineer","DevOps / SRE",
   "UX Designer","UI Designer",
   "Business Analyst","Data Analyst","Data Scientist","BI Developer",
+  "Data Engineer","Data Governance Analyst","Data Steward","Data Quality Analyst","Data Architect",
   "AI Engineer","ML Engineer","LLM Engineer","MLOps Engineer","Prompt Engineer",
   "Scrum Master","Product Owner","Architect","Project Manager",
 ];
