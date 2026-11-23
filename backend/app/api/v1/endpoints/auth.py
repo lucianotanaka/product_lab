@@ -2,7 +2,7 @@ import secrets
 import string
 from datetime import datetime, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -64,7 +64,12 @@ def register(body: UserRegister, db: Session = Depends(get_db)):
     return user
 
 @router.post("/login", response_model=TokenOut, summary="Login — seta cookie httpOnly com JWT")
-def login(response: Response, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(
+    request: Request,
+    response: Response,
+    form: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
     user = db.query(User).filter(User.user_email == form.username).first()
     if not user or not verify_password(form.password, user.user_password):
         raise HTTPException(
@@ -76,13 +81,17 @@ def login(response: Response, form: OAuth2PasswordRequestForm = Depends(), db: S
 
     token = create_access_token({"sub": user.user_email, "role": user.user_role})
 
-    # Cookie httpOnly — inacessível a JavaScript (protege contra XSS)
+    # Em produção HTTP o cookie Secure não é persistido/enviado pelo navegador.
+    # Só marcar secure=True quando a requisição efetivamente chegar como HTTPS.
+    forwarded_proto = request.headers.get("x-forwarded-proto", "")
+    request_is_https = request.url.scheme == "https" or forwarded_proto.lower() == "https"
+
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        secure=settings.APP_ENV != "development",  # False em dev local (sem HTTPS)
-        samesite="lax",           # mitiga CSRF sem bloquear navegação normal
+        secure=request_is_https,
+        samesite="lax",
         max_age=TOKEN_EXPIRE_MINUTES * 60,
         path="/",
     )

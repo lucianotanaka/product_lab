@@ -736,7 +736,7 @@ git status
 Se você fez alterações no ambiente de desenvolvimento e quer que elas sigam para produção, deve executar os comandos **em sequência**, nesta ordem:
 
 1. `git add .` — preparar os arquivos alterados da pasta atual para o commit
-2. `git commit` — registrar localmente a alteração
+2. `git commit -m "docs: ajusta tutorial de deploy no CentOS"` — registrar localmente a alteração com uma mensagem de commit clara e objetiva
 3. `git push` — enviar a alteração para o GitHub
 
 Use `git pull origin main` **apenas se precisar primeiro trazer para sua máquina local o que já está no GitHub**, antes de publicar novas alterações:
@@ -801,13 +801,29 @@ npm run build
 
 Depois de validar localmente, enviar a versão que será implantada para o repositório remoto.
 
+> Boa prática para a mensagem de commit:
+>
+> - começar com um verbo objetivo
+> - resumir a alteração principal
+> - opcionalmente usar um prefixo por contexto, por exemplo:
+>   - `docs:` para documentação
+>   - `feat:` para nova funcionalidade
+>   - `fix:` para correção
+>   - `refactor:` para reorganização sem mudança funcional
+>
+> Exemplo recomendado para este caso:
+>
+> ```powershell
+> git commit -m "docs: ajusta tutorial de deploy no CentOS"
+> ```
+
 Exemplo no Windows PowerShell:
 
 ```powershell
 cd C:\Users\luciano.tanaka\Projects\product_lab
 git status
 git add .
-git commit -m "Preparar versão para deploy"
+git commit -m "docs: ajusta tutorial de deploy no CentOS"
 git push origin main
 ```
 
@@ -817,7 +833,7 @@ Fluxo recomendado na estação Windows para **mandar atualizações do desenvolv
 cd C:\Users\luciano.tanaka\Projects\product_lab
 git status
 git add .
-git commit -m "Atualiza tutorial de deploy CentOS"
+git commit -m "docs: ajusta tutorial de deploy no CentOS"
 git push origin main
 ```
 
@@ -833,7 +849,7 @@ git pull origin main
 O `git commit` deve retornar algo como:
 
 ```text
-[main abc1234] Atualiza tutorial de deploy CentOS
+[main abc1234] docs: ajusta tutorial de deploy no CentOS
  1 file changed, ...
 ```
 
@@ -923,12 +939,30 @@ docs
 
 ### 12.5 Atualizar o código no servidor quando o clone já existir
 
-Se o diretório `/opt/product_lab` já contiver um clone Git válido do Product Lab, atualizar assim:
+Se o diretório `/opt/product_lab` já contiver um clone Git válido do Product Lab, atualizar assim.
+
+> **Importante:** no servidor, prefira executar os comandos Git com o mesmo usuário dono do diretório, que neste tutorial é `productlab`.  
+> Isso evita erro de **dubious ownership** quando o clone foi criado por outro usuário.
+
+Verificar o proprietário do diretório:
 
 ```bash
-cd /opt/product_lab
-git status
-git pull
+ls -ld /opt/product_lab
+```
+
+### Resultado esperado
+
+Saída semelhante a:
+
+```text
+drwxr-xr-x. ... productlab productlab ... /opt/product_lab
+```
+
+Atualizar usando o usuário correto:
+
+```bash
+sudo -u productlab git -C /opt/product_lab status
+sudo -u productlab git -C /opt/product_lab pull
 ```
 
 ### Resultado esperado
@@ -940,6 +974,45 @@ Already up to date.
 ```
 
 ou trazer novos commits do remoto.
+
+#### Se aparecer erro de dubious ownership
+
+Exemplo do erro:
+
+```text
+fatal: detected dubious ownership in repository at '/opt/product_lab'
+To add an exception for this directory, call:
+
+        git config --global --add safe.directory /opt/product_lab
+```
+
+Isso acontece quando o usuário atual não é o dono esperado do repositório ou quando o clone foi criado com outro usuário.
+
+#### Correção recomendada
+
+Primeiro confirmar e corrigir a posse do diretório para o usuário de execução da aplicação:
+
+```bash
+sudo chown -R productlab:productlab /opt/product_lab
+```
+
+Depois executar os comandos Git com esse mesmo usuário:
+
+```bash
+sudo -u productlab git -C /opt/product_lab status
+sudo -u productlab git -C /opt/product_lab pull
+```
+
+#### Correção alternativa
+
+Se houver necessidade operacional de usar outro usuário no servidor, adicionar explicitamente o diretório como seguro para esse usuário:
+
+```bash
+git config --global --add safe.directory /opt/product_lab
+```
+
+> Usar essa alternativa apenas se realmente fizer sentido operar o repositório com outro usuário.  
+> Para este tutorial, a prática preferencial continua sendo: **clone, pull e manutenção Git com o usuário `productlab`**.
 
 Se `git status` ou `git pull` retornarem erro como:
 
@@ -999,30 +1072,112 @@ sudo -u productlab cp /opt/product_lab/backend/env.example /opt/product_lab/back
 sudo -u productlab vim /opt/product_lab/backend/.env
 ```
 
-Ajustar pelo menos estes valores:
+Ao abrir o arquivo copiado de `env.example`, ele virá com valores de exemplo.  
+Para produção, **alterar exatamente os campos abaixo**.
 
-```dotenv
-APP_ENV=production
-DEBUG=false
-SECRET_KEY=gere-uma-chave-bem-grande-e-aleatoria
-DATABASE_URL=postgresql://productlab:prdctmngr%402026@localhost:5432/product_lab
-ALLOWED_ORIGINS=https://seu-dominio.com
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4o-mini
+### 14.1 Campos que devem ser alterados no `.env`
+
+#### `DATABASE_URL`
+
+Se a senha do PostgreSQL criada para o usuário `productlab` for:
+
+```text
+prdctmngr@2026
 ```
 
-### Gerar SECRET_KEY
+então o caractere `@` deve ser codificado como `%40` dentro da URL.  
+Portanto, a linha correta deve ficar:
+
+```dotenv
+DATABASE_URL=postgresql://productlab:prdctmngr%402026@localhost:5432/product_lab
+```
+
+> Se no banco a senha real for outra, usar a senha real correspondente nessa URL.
+
+#### `SECRET_KEY`
+
+Trocar esta linha de exemplo:
+
+```dotenv
+SECRET_KEY=troque-por-uma-chave-secreta-aleatoria-de-64-chars
+```
+
+por uma chave real gerada no servidor.
+
+Gerar com:
 
 ```bash
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-### Resultado esperado
-
-Uma string longa, por exemplo:
+Exemplo de resultado:
 
 ```text
-6b7b9d0d6f3a0d...<64+ chars>...
+6b7b9d0d6f3a0d7a5b5d9e0a9d31a4a2b97f9d7d0e9a6c7b5f4a3d2c1b0e8f7
+```
+
+Depois substituir no `.env`, por exemplo:
+
+```dotenv
+SECRET_KEY=6b7b9d0d6f3a0d7a5b5d9e0a9d31a4a2b97f9d7d0e9a6c7b5f4a3d2c1b0e8f7
+```
+
+#### `ALLOWED_ORIGINS`
+
+Trocar a linha de exemplo que inclui `localhost` e domínio fictício por apenas o domínio HTTPS real de produção.
+
+Exemplo:
+
+```dotenv
+ALLOWED_ORIGINS=https://seu-dominio.com
+```
+
+Se também quiser aceitar `www`:
+
+```dotenv
+ALLOWED_ORIGINS=https://seu-dominio.com,https://www.seu-dominio.com
+```
+
+> Em produção, não é recomendável manter `http://localhost:5173` e `http://localhost:3000`, a menos que exista uma necessidade operacional específica.
+
+#### `OPENAI_API_KEY`
+
+Se a funcionalidade com OpenAI for usada em produção, preencher com a chave real:
+
+```dotenv
+OPENAI_API_KEY=sk-sua-chave-real
+```
+
+Se não for usar agora, deixar vazio:
+
+```dotenv
+OPENAI_API_KEY=
+```
+
+### 14.2 Campos que podem permanecer como estão
+
+Se o ambiente seguir o padrão deste tutorial, estes campos podem permanecer assim:
+
+```dotenv
+APP_ENV=production
+DEBUG=false
+DB_POOL_SIZE=10
+DB_MAX_OVERFLOW=20
+OPENAI_MODEL=gpt-4o-mini
+```
+
+### 14.3 Exemplo de como o `.env` deve ficar em produção
+
+```dotenv
+DATABASE_URL=postgresql://productlab:prdctmngr%402026@localhost:5432/product_lab
+APP_ENV=production
+DEBUG=false
+SECRET_KEY=COLE_AQUI_A_CHAVE_GERADA_NO_SERVIDOR
+ALLOWED_ORIGINS=https://seu-dominio.com
+DB_POOL_SIZE=10
+DB_MAX_OVERFLOW=20
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
 ```
 
 > Observações:
@@ -1031,6 +1186,7 @@ Uma string longa, por exemplo:
 > - `DATABASE_URL` é obrigatória.
 > - `ALLOWED_ORIGINS` deve conter o domínio HTTPS final.
 > - `OPENAI_API_KEY` é opcional. Só é necessária para recursos que usam OpenAI.
+> - Se a senha do PostgreSQL contiver `@`, usar `%40` dentro da `DATABASE_URL`.
 
 ---
 
@@ -1285,7 +1441,21 @@ favicon.svg
 
 ---
 
-## 19. Configurar Nginx como proxy reverso e servidor do frontend
+## 19. Configuração temporária do Nginx para emissão do certificado
+
+> **Importante**
+>
+> O bloco abaixo em **HTTP/porta 80** é apenas uma etapa **temporária** para:
+>
+> - validar o proxy reverso
+> - validar o frontend estático
+> - permitir a emissão do certificado Let's Encrypt
+>
+> **Não** deve ser o estado final de produção.  
+> O estado final correto será:
+>
+> - **porta 80** apenas para redirecionar para HTTPS
+> - **porta 443** para servir o Product Lab com TLS
 
 Criar arquivo:
 
@@ -1293,12 +1463,27 @@ Criar arquivo:
 sudo vim /etc/nginx/conf.d/productlab.conf
 ```
 
-Conteúdo:
+Conteúdo temporário inicial:
 
 ```nginx
 server {
     listen 80;
-    server_name seu-dominio.com;
+    server_name seu-dominio.com localhost 127.0.0.1;
+
+    location = /productlab {
+        return 301 /productlab/;
+    }
+
+    location = /productlab/ {
+        root /var/www;
+        index index.html;
+        try_files /productlab/index.html =404;
+    }
+
+    location /productlab/assets/ {
+        root /var/www;
+        try_files $uri =404;
+    }
 
     location /productlab/ {
         root /var/www;
@@ -1335,9 +1520,9 @@ Recarregar:
 sudo systemctl reload nginx
 ```
 
-### Testes esperados
+### Testes temporários esperados
 
-#### Teste do frontend
+#### Teste do frontend em HTTP temporário
 
 ```bash
 curl -I http://seu-dominio.com/productlab/
@@ -1349,7 +1534,7 @@ Resultado esperado:
 HTTP/1.1 200 OK
 ```
 
-#### Teste da API via Nginx
+#### Teste da API via Nginx em HTTP temporário
 
 ```bash
 curl http://seu-dominio.com/api/v1/health
@@ -1364,6 +1549,50 @@ Resultado esperado:
   "database": "connected"
 }
 ```
+
+> Se esses testes funcionarem, prosseguir imediatamente para a emissão do certificado no passo seguinte, para então colocar o ambiente em HTTPS.
+>
+> **Importante sobre SELinux em CentOS**
+>
+> Depois de publicar os arquivos do frontend em `/var/www/productlab`, pode ser necessário ajustar o contexto SELinux para que o Nginx consiga servir o conteúdo estático corretamente.
+>
+> Verificar contexto:
+>
+> ```bash
+> ls -lZ /var/www/productlab
+> ls -lZ /var/www/productlab/index.html
+> ```
+>
+> Se os arquivos estiverem com contexto `var_t`, ajustar para `httpd_sys_content_t`:
+>
+> ```bash
+> sudo semanage fcontext -a -t httpd_sys_content_t "/var/www/productlab(/.*)?"
+> sudo restorecon -Rv /var/www/productlab
+> ```
+>
+> Resultado esperado:
+>
+> ```text
+> Relabeled /var/www/productlab/index.html from ...:var_t:... to ...:httpd_sys_content_t:...
+> ```
+>
+> Verificação final:
+>
+> ```bash
+> ls -lZ /var/www/productlab/index.html
+> ```
+>
+> O esperado é conter:
+>
+> ```text
+> httpd_sys_content_t
+> ```
+>
+> Como o Nginx também fará proxy para o backend local em `127.0.0.1:8000`, habilitar também:
+>
+> ```bash
+> sudo setsebool -P httpd_can_network_connect 1
+> ```
 
 ---
 
@@ -1391,6 +1620,23 @@ Complete!
 ```bash
 sudo certbot --nginx -d seu-dominio.com
 ```
+
+> **Atenção sobre domínios internos**
+>
+> Let's Encrypt público normalmente **não emite certificado para hosts internos**, por exemplo:
+>
+> - `servidor.local`
+> - `brcghmdb02.na.didata.local`
+>
+> Para esses casos, usar uma destas alternativas:
+>
+> 1. publicar o Product Lab com um **domínio público real**
+> 2. usar **certificado corporativo/interno**
+> 3. usar uma **CA interna** da empresa
+>
+> Portanto, o fluxo com Certbot deste tutorial vale para **FQDN público válido**, acessível para validação do Let's Encrypt.
+>
+> Se o ambiente usar host interno `.local`, o Product Lab pode funcionar normalmente em HTTP ou HTTPS com certificado interno, mas **não** com Let's Encrypt público.
 
 O assistente solicitará:
 
@@ -1425,7 +1671,10 @@ Congratulations, all simulated renewals succeeded
 
 ## 21. Ajustar Nginx final para HTTPS
 
-Após o Certbot, o arquivo tende a ser ajustado automaticamente. O comportamento esperado é:
+Após o Certbot, o arquivo tende a ser ajustado automaticamente.  
+Esse é o **estado final correto de produção**.
+
+O comportamento esperado é:
 
 - `http://seu-dominio.com` redireciona para HTTPS
 - `https://seu-dominio.com/productlab/` serve o frontend
@@ -1446,6 +1695,21 @@ server {
 
     ssl_certificate /etc/letsencrypt/live/seu-dominio.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/seu-dominio.com/privkey.pem;
+
+    location = /productlab {
+        return 301 /productlab/;
+    }
+
+    location = /productlab/ {
+        root /var/www;
+        index index.html;
+        try_files /productlab/index.html =404;
+    }
+
+    location /productlab/assets/ {
+        root /var/www;
+        try_files $uri =404;
+    }
 
     location /productlab/ {
         root /var/www;
@@ -1656,6 +1920,60 @@ Verificar:
 - Nginx ativo
 - domínio acessível publicamente
 
+Se o host for interno, por exemplo `*.local`, lembrar que o Let's Encrypt público não emite certificado para esse tipo de nome. Nesse caso, usar domínio público real ou certificado corporativo/interno.
+
+### 6. Frontend retorna 404 ou 403 no Nginx, mesmo com build pronto
+
+Validar se os arquivos existem:
+
+```bash
+ls -la /var/www/productlab
+ls -la /var/www/productlab/assets
+```
+
+O esperado é conter:
+
+```text
+index.html
+assets
+favicon.svg
+icons.svg
+```
+
+Validar diretamente no servidor:
+
+```bash
+curl -I http://127.0.0.1/productlab/index.html
+```
+
+Se isso retornar `200 OK`, o build foi publicado corretamente.
+
+Se `/productlab/index.html` funcionar mas `/productlab/` falhar, revisar o bloco do Nginx para usar o tratamento explícito de:
+
+- `location = /productlab`
+- `location = /productlab/`
+- `location /productlab/assets/`
+- `location /productlab/`
+
+Também validar contexto SELinux:
+
+```bash
+ls -lZ /var/www/productlab/index.html
+```
+
+O esperado é conter:
+
+```text
+httpd_sys_content_t
+```
+
+Se estiver como `var_t`, aplicar:
+
+```bash
+sudo semanage fcontext -a -t httpd_sys_content_t "/var/www/productlab(/.*)?"
+sudo restorecon -Rv /var/www/productlab
+```
+
 ---
 
 ## 25. Resumo executivo
@@ -1672,6 +1990,14 @@ Verificar:
 ### O que **não** é necessário
 
 - **Apache**
+
+### Como expor o Product Lab corretamente
+
+- **não deixar somente em HTTP**
+- **usar HTTPS como acesso final oficial**
+- manter a **porta 80** apenas para:
+  - desafio/acme do Let's Encrypt
+  - redirecionamento para `https://`
 
 ### Como servir o Product Lab
 
