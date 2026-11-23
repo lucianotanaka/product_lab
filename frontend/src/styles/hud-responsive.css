@@ -1,0 +1,109 @@
+/* ═══════════════════════════════════════════════════════════════════
+   hud-responsive.css — Responsive Breakpoints (NTT360)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Tablet (≤ 1024px) ── */
+@media (max-width: 1024px) {
+  :root {
+    --section-px: 24px;
+  }
+
+  .pl-nav__clock { display: none; }
+  .pl-nav__links { gap: 2px; }
+  .pl-nav__link  { padding: 6px 8px; font-size: 12px; }
+
+  .hero-title    { font-size: 40px; }
+  .hero-subtitle { font-size: 15px; max-width: 100%; }
+
+  .about-grid    { grid-template-columns: 1fr; gap: 40px; }
+  .about-visual  { display: none; }
+
+  .stats-grid    { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .modules-grid  { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+
+  .cockpit-metrics { gap: 8px; }
+}
+
+/* ── Mobile (≤ 768px) ── */
+@media (max-width: 768px) {
+  :root {
+    --section-px: 16px;
+    --nav-height: 52px;
+  }
+
+  /* Nav */
+  .pl-nav__links  { display: none; }
+  .pl-nav__inner  { gap: 12px; }
+  .pl-nav__logout { padding: 4px 8px; font-size: 11px; }
+  .pl-nav__user-name { display: none; }
+
+  /* Hero */
+  .pl-hero        { min-height: 400px; }
+  .pl-hero::after { display: none; }
+  .pl-hero__content { padding: 48px var(--section-px); }
+  .hero-title     { font-size: 32px; letter-spacing: -0.3px; }
+  .hero-subtitle  { font-size: 14px; }
+  .hero-badge     { margin-bottom: 14px; }
+
+  .hero-product-selector { max-width: 100%; }
+
+  .hero-actions   { flex-direction: column; align-items: flex-start; }
+  .btn-hero-primary, .btn-hero-secondary { width: 100%; justify-content: center; }
+
+  .hero-telemetry { flex-wrap: wrap; gap: 12px; }
+  .telemetry-item { border-right: none; padding: 0; }
+
+  /* Modules */
+  .pl-modules     { padding: 40px var(--section-px); }
+  .modules-grid   { grid-template-columns: 1fr; }
+  .module-card    { padding: 20px; }
+
+  /* Stats */
+  .pl-stats       { padding: 40px var(--section-px); }
+  .stats-grid     { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .stat-value     { font-size: 24px; }
+
+  /* Cockpit */
+  .pl-cockpit     { padding: 24px var(--section-px); }
+  .cockpit-header { flex-direction: column; gap: 12px; }
+  .cockpit-metrics { gap: 8px; }
+  .cockpit-gauge  { min-width: 78px; padding: 10px 8px; }
+  .cockpit-gauge__value { font-size: 15px; }
+
+  /* About */
+  .pl-about       { padding: 40px var(--section-px); }
+  .about-text     { font-size: 14px; }
+
+  /* Footer */
+  .pl-footer__inner { flex-direction: column; align-items: flex-start; gap: 12px; }
+
+  /* Module pages */
+  .mod-nav .pl-nav__inner { gap: 8px; }
+}
+
+/* ── Small mobile (≤ 480px) ── */
+@media (max-width: 480px) {
+  .hero-title     { font-size: 26px; }
+  .stats-grid     { grid-template-columns: 1fr 1fr; }
+  .cockpit-metrics { gap: 6px; }
+  .cockpit-gauge  { min-width: 70px; }
+
+  .section-title  { font-size: 20px; }
+}
+
+/* ── Light mode module pages ── */
+[data-theme="light"] .mod-root   { background: #f0f4f8; }
+[data-theme="light"] .mod-table-wrap { box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px var(--border); }
+[data-theme="light"] .mod-modal  { box-shadow: 0 20px 60px rgba(0,0,0,0.15) !important; }
+[data-theme="light"] .module-card { background: #ffffff; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+[data-theme="light"] .stat-card  { background: #ffffff; }
+[data-theme="light"] .pillar     { background: #ffffff; }
+[data-theme="light"] .cockpit-gauge { background: #ffffff; }
+[data-theme="light"] .cockpit-attention { background: #ffffff; }
+[data-theme="light"] .attention-item:hover { background: #f8fafc; }
+
+/* ── Print ── */
+@media print {
+  .pl-nav, .pl-hero, .pl-footer, .hero-actions { display: none; }
+  .pl-root { background: white; color: black; }
+}

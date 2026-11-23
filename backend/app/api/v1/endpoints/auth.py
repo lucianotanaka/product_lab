@@ -2,12 +2,17 @@ import secrets
 import string
 from datetime import datetime, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from app.core.database import get_db
-from app.core.security import hash_password, verify_password, create_access_token, get_current_user, require_admin
+from app.core.security import (
+    hash_password, verify_password, create_access_token,
+    get_current_user, require_admin,
+    COOKIE_NAME, TOKEN_EXPIRE_MINUTES,
+)
+from app.core.config import settings
 from app.models.user import User
 
 router = APIRouter()
@@ -41,7 +46,6 @@ class UserOut(BaseModel):
     class Config: from_attributes = True
 
 class TokenOut(BaseModel):
-    access_token: str
     token_type: str = "bearer"
     user: UserOut
 
@@ -59,17 +63,36 @@ def register(body: UserRegister, db: Session = Depends(get_db)):
     db.add(user); db.commit(); db.refresh(user)
     return user
 
-@router.post("/login", response_model=TokenOut, summary="Login — retorna JWT Bearer token")
-def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@router.post("/login", response_model=TokenOut, summary="Login — seta cookie httpOnly com JWT")
+def login(response: Response, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.user_email == form.username).first()
     if not user or not verify_password(form.password, user.user_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="E-mail ou senha incorretos",
-                            headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="E-mail ou senha incorretos",
+        )
     if not user.user_is_active:
         raise HTTPException(400, "Conta inativa")
+
     token = create_access_token({"sub": user.user_email, "role": user.user_role})
-    return {"access_token": token, "token_type": "bearer", "user": user}
+
+    # Cookie httpOnly — inacessível a JavaScript (protege contra XSS)
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=settings.APP_ENV != "development",  # False em dev local (sem HTTPS)
+        samesite="lax",           # mitiga CSRF sem bloquear navegação normal
+        max_age=TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+    return {"token_type": "bearer", "user": user}
+
+
+@router.post("/logout", summary="Logout — remove o cookie de sessão")
+def logout(response: Response):
+    response.delete_cookie(key=COOKIE_NAME, path="/")
+    return {"message": "Logout realizado com sucesso"}
 
 @router.get("/me", response_model=UserOut, summary="Retorna o usuário autenticado")
 def me(current_user: User = Depends(get_current_user)):

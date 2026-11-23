@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, DateTime, String, Text
+from sqlalchemy import Column, DateTime, String, Text, ForeignKey
 from sqlalchemy import Enum as SAE
 from sqlalchemy.dialects.postgresql import ARRAY
 from app.core.database import Base
@@ -14,13 +14,17 @@ class DecisionStatus(str, Enum):
 
 class Decision(Base):
     __tablename__ = "decisions"
-    id           = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    product_id   = Column(String(36), nullable=False, index=True)
-    title        = Column(String(500), nullable=False)
-    context      = Column(Text)
-    decision     = Column(Text)
-    consequences = Column(Text)
-    status       = Column(SAE(DecisionStatus), default=DecisionStatus.proposed)
-    tags         = Column(ARRAY(String), default=list)
-    created_at   = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at   = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    id                = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    product_id        = Column(String(36), nullable=False, index=True)
+    title             = Column(String(500), nullable=False)
+    context           = Column(Text)
+    decision          = Column(Text)
+    consequences      = Column(Text)
+    status            = Column(SAE(DecisionStatus), default=DecisionStatus.proposed)
+    tags              = Column(ARRAY(String), default=list)
+    discovery_opportunity_id = Column(String(36), ForeignKey("discovery_opportunities.id", ondelete="SET NULL"), nullable=True, index=True)
+    business_case_id  = Column(String(36), ForeignKey("discovery_business_cases.id", ondelete="SET NULL"), nullable=True, index=True)
+    decided_by        = Column(String(200), nullable=True)
+    decision_date     = Column(DateTime, nullable=True)
+    created_at        = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at        = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

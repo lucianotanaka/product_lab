@@ -1,0 +1,268 @@
+/* ═══════════════════════════════════════════════════════════════════
+   hud-module-themes.css — Module Page Themes (NTT360 Design)
+   All science groups unified to NTT360 corporate style.
+   Dark navy nav + clean card layout + blue/cyan accents.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Shared page layout ── */
+.mod-root {
+  min-height: 100vh;
+  background: var(--bg-base);
+  font-family: var(--font-body);
+  color: var(--text-primary);
+}
+
+/* Remove all sci-fi pseudo-element decorations */
+.mod-root::before   { display: none !important; }
+.mod-root::after    { display: none !important; }
+.mod-main::before   { display: none !important; }
+.mod-main::after    { display: none !important; }
+
+/* ── Navigation bar ── */
+.mod-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--nav-height, 56px);
+  background: var(--bg-nav) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  overflow: visible;
+}
+.mod-nav::after  { display: none !important; }
+.mod-nav::before { display: none !important; }
+
+.mod-nav__back {
+  border-color: rgba(255,255,255,0.15) !important;
+  color: rgba(255,255,255,0.7) !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-body) !important;
+  font-size: 12px !important;
+  letter-spacing: 0 !important;
+  transition: all var(--transition) !important;
+}
+.mod-nav__back:hover {
+  background: rgba(255,255,255,0.08) !important;
+  color: #fff !important;
+}
+
+.mod-nav__accent { color: var(--color-cyan) !important; }
+.mod-nav__product-select {
+  border-color: rgba(255,255,255,0.12) !important;
+  color: rgba(255,255,255,0.75) !important;
+  background: rgba(255,255,255,0.05) !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-body) !important;
+}
+.mod-nav__user-dot {
+  background: var(--color-blue-ntt) !important;
+  box-shadow: none !important;
+  border-radius: 50% !important;
+}
+
+/* ── Page header ── */
+.mod-header {
+  border-left: 3px solid var(--color-blue-ntt) !important;
+  border-bottom: none !important;
+  padding-left: 16px !important;
+  margin-bottom: 24px !important;
+  padding-bottom: 0 !important;
+  background: none !important;
+}
+
+.mod-header__title { color: var(--text-primary) !important; font-family: var(--font-body) !important; letter-spacing: -0.3px !important; }
+.mod-header__title span { color: var(--color-blue-ntt) !important; }
+.mod-header__eyebrow, .mod-header__eyebrow span {
+  color: var(--text-secondary) !important;
+  letter-spacing: 1.5px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+.mod-header__eyebrow::before { display: none !important; }
+
+/* ── Table wrapper ── */
+.mod-table-wrap {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-style: solid !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+/* Remove all corner brackets */
+.mod-table-wrap::before,
+.mod-table-wrap::after {
+  display: none !important;
+}
+
+.mod-table thead tr {
+  background: var(--bg-surface) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.mod-table th {
+  color: var(--text-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  padding: 10px 14px !important;
+}
+
+.mod-table td {
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border) !important;
+  font-size: 13px !important;
+  letter-spacing: 0 !important;
+  line-height: 1.5 !important;
+  padding: 10px 14px !important;
+}
+
+.mod-table tbody tr:hover {
+  background: var(--bg-surface) !important;
+  box-shadow: none !important;
+}
+
+.mod-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02) !important; }
+
+[data-theme="light"] .mod-table tbody tr:nth-child(even) { background: rgba(0,0,0,0.02) !important; }
+[data-theme="light"] .mod-table tbody tr:hover { background: rgba(21,101,192,0.04) !important; }
+
+/* ── Empty state ── */
+.mod-empty { color: var(--text-secondary) !important; text-align: center; padding: 40px; }
+.mod-empty__icon { color: var(--text-muted) !important; text-shadow: none !important; font-size: 32px; }
+
+/* ── Modal ── */
+.mod-modal {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
+}
+
+.mod-modal::before,
+.mod-modal::after { display: none !important; }
+
+.mod-modal__header {
+  background: none !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.mod-modal__title { color: var(--text-primary) !important; font-family: var(--font-body) !important; }
+.mod-modal__title span { color: var(--color-blue-ntt) !important; }
+.mod-modal__eyebrow { color: var(--text-secondary) !important; letter-spacing: 1px !important; font-size: 11px !important; }
+.mod-modal__footer { border-top: 1px solid var(--border) !important; }
+
+/* ── Score chip ── */
+.score-chip {
+  color: var(--color-blue-ntt) !important;
+  background: rgba(21,101,192,0.1) !important;
+  border-color: rgba(21,101,192,0.25) !important;
+  border-radius: var(--radius-full) !important;
+}
+
+/* ── Field labels ── */
+.mod-field__label { color: var(--text-secondary) !important; font-family: var(--font-body) !important; font-size: 12px !important; font-weight: 500 !important; }
+
+/* ── Form inputs ── */
+.mod-input, .mod-textarea, .mod-select {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-strong) !important;
+  color: var(--text-primary) !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-body) !important;
+  font-size: 13px !important;
+  letter-spacing: 0 !important;
+}
+.mod-input:focus, .mod-textarea:focus, .mod-select:focus {
+  border-color: var(--color-blue-ntt) !important;
+  box-shadow: 0 0 0 3px rgba(21,101,192,0.12) !important;
+  background: var(--bg-card) !important;
+  outline: none !important;
+}
+
+[data-theme="light"] .mod-input,
+[data-theme="light"] .mod-textarea,
+[data-theme="light"] .mod-select {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+/* ── Buttons ── */
+.btn-add {
+  background: var(--color-blue-ntt) !important;
+  border: 1px solid var(--color-blue-ntt) !important;
+  color: #ffffff !important;
+  clip-path: none !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-body) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  padding: 8px 16px !important;
+  border-top-width: 1px !important;
+}
+.btn-add:hover {
+  background: var(--color-blue-dark) !important;
+  border-color: var(--color-blue-dark) !important;
+  box-shadow: var(--shadow-sm) !important;
+  clip-path: none !important;
+}
+
+.btn-save {
+  background: transparent !important;
+  border: 1px solid var(--color-blue-ntt) !important;
+  color: var(--color-blue-ntt) !important;
+  clip-path: none !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-body) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 8px 16px !important;
+}
+.btn-save:hover {
+  background: rgba(21,101,192,0.08) !important;
+  box-shadow: none !important;
+}
+
+.btn-icon {
+  background: transparent !important;
+  border: 1px solid var(--border-strong) !important;
+  color: var(--text-secondary) !important;
+  clip-path: none !important;
+  border-radius: var(--radius-md) !important;
+}
+.btn-icon:hover {
+  border-color: var(--color-blue-ntt) !important;
+  color: var(--color-blue-ntt) !important;
+  background: rgba(21,101,192,0.06) !important;
+}
+
+.btn-cancel {
+  background: transparent !important;
+  border: 1px solid var(--border-strong) !important;
+  color: var(--text-secondary) !important;
+  border-radius: var(--radius-md) !important;
+}
+.btn-cancel:hover { background: var(--bg-surface) !important; color: var(--text-primary) !important; }
+
+/* ── Top accent lines per group — all unified to NTT360 blue/cyan ── */
+[data-science="astrophysics"]::before,
+[data-science="quantum"]::before,
+[data-science="plasma"]::before,
+[data-science="neural"]::before,
+[data-science="molecular"]::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-blue-ntt), var(--color-cyan), var(--color-blue-ntt), transparent);
+  z-index: 300;
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(21,101,192,0.4);
+}
+
+/* ── Light mode adjustments ── */
+[data-theme="light"] .mod-root { background: var(--bg-base); }
+[data-theme="light"] .mod-nav  { background: var(--bg-nav) !important; }
+[data-theme="light"] .mod-table-wrap { background: #ffffff !important; }
+[data-theme="light"] .mod-modal { background: #ffffff !important; border-color: var(--border) !important; box-shadow: var(--shadow-lg) !important; }
+[data-theme="light"] .mod-empty { color: var(--text-secondary) !important; }

@@ -1,8 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import ModuleLayout from "../../../shared/components/ModuleLayout";
-import { apiGet, apiPost, apiPatch, apiDelete } from "../../../shared/services/api";
+import AIAgentExecutionStatus from "../../../shared/components/ai_agent_execution_status";
+import { apiGet, apiPost, apiPatch, apiDelete, ApiError } from "../../../shared/services/api";
+import {
+  createAIAgentRequestId,
+  sendAIAgentPrompt,
+  subscribeAIAgentExecutionStatus,
+  type AIAgentExecutionStatusResponse,
+  type AIAgentExecutionSubscription,
+} from "../../../shared/services/aiAgentExecution";
 import type { Paginated } from "../../../shared/services/api";
 
 interface ItemType { item_type_id: number; name: string; display_order: number; is_active: boolean; }
@@ -14,6 +23,13 @@ interface Sprint {
   sprint_id: number; product_id: number; name: string; goal?: string;
   start_date?: string; end_date?: string; status: string;
   capacity?: number; velocity?: number; created_at: string; updated_at: string;
+}
+interface BacklogRequirementLink {
+  id: number;
+  requirement_id: number;
+  feature_id: number;
+  coverage_type: string;
+  notes?: string;
 }
 interface BacklogItem {
   item_id: number; product_id?: number; feature_id?: number; sprint_id?: number;
@@ -72,6 +88,8 @@ const DIM = "#7899b0";
 
 export default function BacklogPage() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"items" | "sprints" | "team" | "network">("items");
   const [netLinks, setNetLinks] = useState<{link_id:number;source_id:number;target_id:number;link_type:string}[]>([]);
   const [netLoading, setNetLoading] = useState(false);
@@ -82,6 +100,7 @@ export default function BacklogPage() {
   const [items, setItems] = useState<BacklogItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [modal, setModal] = useState<"create" | "edit" | null>(null);
@@ -114,9 +133,16 @@ export default function BacklogPage() {
   // — Inline notes panel (row click) —
   const [selectedItem, setSelectedItem] = useState<BacklogItem | null>(null);
   const [inlineNotes, setInlineNotes] = useState<Note[]>([]);
+  const [requirementLinks, setRequirementLinks] = useState<BacklogRequirementLink[]>([]);
   const [loadingInlineNotes, setLoadingInlineNotes] = useState(false);
   const [inlineNoteContent, setInlineNoteContent] = useState("");
   const [savingInlineNote, setSavingInlineNote] = useState(false);
+  const [activeEditTab, setActiveEditTab] = useState<"basic" | "ado_sprint" | "team" | "details" | "wsjf" | "links" | "notes">("basic");
+  const [aiReviewSending, setAiReviewSending] = useState<number | null>(null);
+  const [aiReviewError, setAiReviewError] = useState("");
+  const [aiReviewExecutionVisible, setAiReviewExecutionVisible] = useState(false);
+  const [aiReviewExecutionStatus, setAiReviewExecutionStatus] = useState<AIAgentExecutionStatusResponse | null>(null);
+  const aiReviewSubscriptionRef = useRef<AIAgentExecutionSubscription | null>(null);
   // — Team member CRUD —
   const EMPTY_MEMBER = { full_name: "", email: "", resource_type: "internal", department: "", company: "", role: "", start_date: "", end_date: "" };
   const [teamModal, setTeamModal] = useState<"create" | "edit" | null>(null);
@@ -133,7 +159,12 @@ export default function BacklogPage() {
 
   const { user } = useAuth();
 
-  const SIZE = 20;
+  useEffect(() => {
+    return () => {
+      aiReviewSubscriptionRef.current?.stop();
+    };
+  }, []);
+
   const pid = productId ? parseInt(productId, 10) : undefined;
 
   useEffect(() => { apiGet<ItemType[]>("/backlog/types/list").then(setItemTypes).catch(() => {}); }, []);
@@ -178,6 +209,25 @@ export default function BacklogPage() {
     try { await apiDelete(`/backlog/${itemId}/notes/${noteId}`); loadNotes(itemId); } catch { /* ignore */ }
   };
 
+  const loadRequirementLinks = async (itemId: number) => {
+    try {
+      const page = await apiGet<Paginated<{ id:number; requirement_id:number; feature_id:number; coverage_type:string; notes?:string }>>(`/requirements?page=1&size=200${pid ? `&product_id=${pid}` : ""}`);
+      const links = await Promise.all(
+        (page.items ?? []).map(async req => {
+          try {
+            const rels = await apiGet<BacklogRequirementLink[]>(`/requirements/${req.id}/features`);
+            return rels.filter(rel => rel.feature_id === itemId);
+          } catch {
+            return [];
+          }
+        })
+      );
+      setRequirementLinks(links.flat());
+    } catch {
+      setRequirementLinks([]);
+    }
+  };
+
   const loadAllProductItems = () => {
     if (!pid) return;
     apiGet<{items: BacklogItem[]; total: number}>(`/backlog?product_id=${pid}&size=200&page=1`)
@@ -205,8 +255,8 @@ export default function BacklogPage() {
     apiGet<Note[]>(`/backlog/${itemId}/notes`).then(setInlineNotes).catch(() => setInlineNotes([])).finally(() => setLoadingInlineNotes(false));
   };
   const handleSelectRow = (item: BacklogItem) => {
-    if (selectedItem?.item_id === item.item_id) { setSelectedItem(null); setInlineNotes([]); return; }
-    setSelectedItem(item); setInlineNoteContent(""); loadInlineNotes(item.item_id);
+    if (selectedItem?.item_id === item.item_id) { setSelectedItem(null); setInlineNotes([]); setRequirementLinks([]); return; }
+    setSelectedItem(item); setInlineNoteContent(""); loadInlineNotes(item.item_id); loadRequirementLinks(item.item_id);
   };
   const handleAddInlineNote = async (itemId: number) => {
     if (!inlineNoteContent.trim()) return;
@@ -274,7 +324,7 @@ export default function BacklogPage() {
   const load = async (p = page) => {
     setLoading(true); setError("");
     try {
-      let qs = `page=${p}&size=${SIZE}`;
+      let qs = `page=${p}&size=${pageSize}`;
       if (pid)                         qs += `&product_id=${pid}`;
       if (filterStatus)                qs += `&current_status=${filterStatus}`;
       if (filterTypeId)                qs += `&item_type_id=${filterTypeId}`;
@@ -285,10 +335,17 @@ export default function BacklogPage() {
     } catch (e: unknown) { setError(e instanceof Error ? e.message : t("backlog.err_load")); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(1); setPage(1); }, [productId, filterStatus, filterTypeId, filterSprintId]);
+  useEffect(() => { load(1); setPage(1); }, [productId, filterStatus, filterTypeId, filterSprintId, pageSize]);
   useEffect(() => { load(); }, [page]);
 
   const handleProductChange = (id: string) => { localStorage.setItem("pl_product", id); setProductId(id); };
+
+  useEffect(() => {
+    const highlightId = Number(new URLSearchParams(location.search).get("highlight") || "");
+    if (!highlightId || items.length === 0) return;
+    const found = items.find(item => item.item_id === highlightId);
+    if (found) handleSelectRow(found);
+  }, [location.search, items]);
 
   const openCreate = () => { setForm({ ...EMPTY }); setEditing(null); setNotes([]); setModal("create"); };
   const openEdit = (item: BacklogItem) => {
@@ -312,7 +369,7 @@ export default function BacklogPage() {
       wsjf_risk_reduction: String(item.wsjf_risk_reduction ?? 1),
       wsjf_job_size: String(item.wsjf_job_size ?? 1),
     });
-    setEditing(item); setModal("edit"); loadNotes(item.item_id); loadLinks(item.item_id); setNewLinkType("relates_to"); setNewLinkTarget(""); loadAllProductItems();
+    setEditing(item); setModal("edit"); setActiveEditTab("basic"); loadNotes(item.item_id); loadLinks(item.item_id); setNewLinkType("relates_to"); setNewLinkTarget(""); loadAllProductItems();
   };
   const closeModal = () => { setModal(null); setEditing(null); };
   const handleSave = async () => {
@@ -354,6 +411,98 @@ export default function BacklogPage() {
     if (!confirm(t("backlog.confirm_delete"))) return;
     try { await apiDelete(`/backlog/${id}`); load(page); }
     catch (e: unknown) { setError(e instanceof Error ? e.message : t("backlog.err_delete")); }
+  };
+
+  const handleAIReview = async (item: BacklogItem) => {
+    if (aiReviewSending) return;
+
+    const requestId = createAIAgentRequestId();
+    setAiReviewSending(item.item_id);
+    setAiReviewError("");
+    setAiReviewExecutionVisible(true);
+    setAiReviewExecutionStatus({
+      request_id: requestId,
+      status: "running",
+      message: "Enviando solicitação",
+      steps: [
+        {
+          key: "received",
+          label: "Pergunta recebida",
+          status: "running",
+          message: "Enviando solicitação",
+        },
+      ],
+    });
+
+    const initialPrompt = `Analise o item do backlog ${item.ado_id || item.item_id} e responda exatamente nesta estrutura:\n\n1. Avaliação geral\n2. Classificação\n3. Pontos positivos\n4. Pontos de atenção\n5. INVEST\n6. Critérios de aceite\n7. Recomendações\n\nConsidere o item como um backlog item do Product Lab e faça uma avaliação objetiva para refinamento e readiness.`;
+    const initialContext = [
+      `Título: ${item.title}`,
+      item.description ? `Descrição: ${item.description}` : null,
+      item.acceptance_criteria ? `Critérios de aceite: ${item.acceptance_criteria}` : null,
+      item.business_value ? `Valor de negócio: ${item.business_value}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    navigate("/modules/ai-agent", {
+      state: {
+        initialModule: "backlog",
+        initialPrompt,
+        initialContext,
+      },
+    });
+
+    try {
+      const { response, requestId: resolvedRequestId } = await sendAIAgentPrompt({
+        message: `Avalie a qualidade desta User Story`,
+        product_id: pid ?? null,
+        product_name: null,
+        company_id: null,
+        module: "backlog",
+        submodule: null,
+        connection_id: null,
+        context: initialContext,
+        entity_type: "backlog_item",
+        entity_id: String(item.item_id),
+        resource_type: null,
+        resource_id: null,
+        opportunity_id: null,
+        research_id: null,
+        canvas_id: null,
+        process_id: null,
+        sprint_id: item.sprint_id ?? null,
+        stakeholder_id: item.requester_stakeholder_id ?? null,
+        meeting_id: null,
+        transcript_id: null,
+        request_id: requestId,
+      });
+
+      aiReviewSubscriptionRef.current?.stop();
+      aiReviewSubscriptionRef.current = subscribeAIAgentExecutionStatus(
+        {
+          requestId: resolvedRequestId,
+          connectionId: response.connection?.id ?? null,
+          productId: pid ?? null,
+          intervalMs: 800,
+        },
+        {
+          onUpdate: setAiReviewExecutionStatus,
+          onError: () => undefined,
+          onComplete: setAiReviewExecutionStatus,
+        }
+      );
+    } catch (e: unknown) {
+      const msg = e instanceof ApiError ? e.message : "Falha ao solicitar IA Review.";
+      setAiReviewError(msg);
+      setAiReviewExecutionStatus((prev) => ({
+        request_id: prev?.request_id || requestId,
+        status: "fail",
+        message: "Falha na execução",
+        steps: prev?.steps ?? [],
+      }));
+    } finally {
+      setAiReviewSending(null);
+    }
   };
 
   const openCreateSprint = () => { setSprintForm({ ...EMPTY_SPRINT }); setEditingSprint(null); setSprintModal("create"); };
@@ -443,6 +592,12 @@ export default function BacklogPage() {
           </select>
         </div>
         {error && <div className="mod-error">⚠ {error}</div>}
+        {aiReviewError && <div className="mod-error">⚠ {aiReviewError}</div>}
+        <AIAgentExecutionStatus
+          execution={aiReviewExecutionStatus}
+          visible={aiReviewExecutionVisible}
+          title="BACKLOG IA REVIEW STATUS"
+        />
         <div className="mod-table-wrap">
           {loading ? <div className="mod-loading">{t("backlog.loading")}</div>
           : items.length === 0 ? (
@@ -457,7 +612,7 @@ export default function BacklogPage() {
                 <th>{t("backlog.col_title")}</th><th>{t("backlog.col_type")}</th>
                 <th>{t("backlog.col_status")}</th><th>{t("backlog.col_wsjf")}</th>
                 <th>{t("backlog.col_sp")}</th><th>{t("backlog.col_sprint")}</th>
-                <th>{t("backlog.col_requester")}</th><th>{t("backlog.col_assigned")}</th><th>{t("backlog.col_ado")}</th><th></th>
+                <th>{t("backlog.col_requester")}</th><th>{t("backlog.col_assigned")}</th><th>{t("backlog.col_ado")}</th><th>AI</th><th></th>
               </tr></thead>
               <tbody>
                 {items.map(item => {
@@ -482,6 +637,18 @@ export default function BacklogPage() {
                       <td style={{ color: DIM, fontSize: 11 }}>{item.requester_stakeholder_id ? requesterName(item.requester_stakeholder_id) : "—"}</td>
                       <td style={{ color: DIM, fontSize: 11 }}>{item.assigned_to_member_id ? assignedName(item.assigned_to_member_id) : "—"}</td>
                       <td style={{ color: DIM, fontSize: 11 }}>{item.ado_id || "—"}</td>
+                      <td>
+                        <button
+                          className="btn-icon"
+                          onClick={e => {
+                            e.stopPropagation();
+                            void handleAIReview(item);
+                          }}
+                          disabled={aiReviewSending === item.item_id}
+                        >
+                          {aiReviewSending === item.item_id ? "SENDING..." : "AI REVIEW"}
+                        </button>
+                      </td>
                       <td><div className="row-actions">
                         <button className="btn-icon" onClick={e => { e.stopPropagation(); openEdit(item); }}>{t("backlog.btn_edit")}</button>
                         <button className="btn-icon btn-icon--danger" onClick={e => { e.stopPropagation(); handleDelete(item.item_id); }}>{t("backlog.btn_del")}</button>
@@ -492,12 +659,28 @@ export default function BacklogPage() {
               </tbody>
             </table>
           )}
-          {total > SIZE && (
-            <div className="mod-pagination">
-              <span>{(page-1)*SIZE+1}–{Math.min(page*SIZE,total)} {t("backlog.pagination_of")} {total}</span>
-              <div className="mod-pagination__btns">
+          {total > 0 && (
+            <div className="mod-pagination" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <span>{(page-1)*pageSize+1}–{Math.min(page*pageSize,total)} {t("backlog.pagination_of")} {total}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 10, color: DIM }}>Rows per page</span>
+                  <select
+                    className="mod-select"
+                    style={{ width: 110, fontSize: 10, padding: "8px 26px 8px 10px" }}
+                    value={pageSize}
+                    onChange={e => { setPageSize(parseInt(e.target.value, 10)); setPage(1); }}
+                  >
+                    {[5, 10, 20, 50].map(size => (
+                      <option key={size} value={size}>{size} / page</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="mod-pagination__btns" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 10, color: DIM }}>Page {page} of {Math.max(1, Math.ceil(total / pageSize))}</span>
                 <button className="btn-page" disabled={page===1} onClick={() => setPage(p=>p-1)}>{t("backlog.btn_prev")}</button>
-                <button className="btn-page" disabled={page*SIZE>=total} onClick={() => setPage(p=>p+1)}>{t("backlog.btn_next")}</button>
+                <button className="btn-page" disabled={page*pageSize>=total} onClick={() => setPage(p=>p+1)}>{t("backlog.btn_next")}</button>
               </div>
             </div>
           )}
@@ -513,6 +696,24 @@ export default function BacklogPage() {
               <button className="mod-modal__close" onClick={() => { setSelectedItem(null); setInlineNotes([]); }}>✕</button>
             </div>
             {loadingInlineNotes ? <div style={{ color: DIM, fontSize: 11 }}>{t("backlog.loading")}</div> : (<>
+              {requirementLinks.length > 0 && (
+                <div style={{ marginBottom: 12, padding: "10px 12px", border: "1px solid rgba(0,212,255,0.12)", background: "rgba(0,0,0,0.15)", borderRadius: 4 }}>
+                  <div style={{ fontSize: 9, color: "#00d4ff", letterSpacing: 2, marginBottom: 8 }}>TRACEABILITY / REQUIREMENTS</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {requirementLinks.map(link => (
+                      <div key={link.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <div style={{ fontSize: 11, color: "#c8d8e8" }}>
+                          Requirement #{link.requirement_id} · {link.coverage_type}
+                          {link.notes ? <span style={{ color: DIM }}> · {link.notes}</span> : null}
+                        </div>
+                        <button className="btn-icon" onClick={(e) => { e.stopPropagation(); navigate(`/modules/requirements?highlight=${link.requirement_id}`); }}>
+                          ABRIR REQUIREMENT
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div style={{ maxHeight: 220, overflowY: "auto", marginBottom: 10 }}>
                 {inlineNotes.length === 0
                   ? <div style={{ color: DIM, fontSize: 11, fontStyle: "italic" }}>{t("backlog.notes_empty")}</div>
@@ -875,7 +1076,7 @@ export default function BacklogPage() {
 
       {modal && (
         <div className="mod-overlay" onClick={closeModal}>
-          <div className="mod-modal" onClick={e => e.stopPropagation()}>
+          <div className="mod-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: modal === "edit" ? "1100px" : "700px", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
             <div className="mod-modal__header">
               <div>
                 <span className="mod-modal__eyebrow">// BACKLOG //</span>
@@ -883,7 +1084,162 @@ export default function BacklogPage() {
               </div>
               <button className="mod-modal__close" onClick={closeModal}>✕</button>
             </div>
-            <div className="mod-modal__body">
+            {modal === "edit" && (
+              <div style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(0,212,255,0.15)", background: "rgba(0,0,0,0.2)", overflowX: "auto", flexShrink: 0 }}>
+                {(["basic", "ado_sprint", "team", "details", "wsjf", "links", "notes"] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveEditTab(tab)}
+                    style={{
+                      padding: "10px 16px",
+                      fontSize: 10,
+                      letterSpacing: 1,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      border: "none",
+                      background: activeEditTab === tab ? "rgba(0,212,255,0.15)" : "transparent",
+                      color: activeEditTab === tab ? "#00d4ff" : DIM,
+                      borderBottom: activeEditTab === tab ? "2px solid #00d4ff" : "1px solid rgba(0,212,255,0.1)",
+                      transition: "all 0.2s",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {tab === "basic" && "BASIC INFO"}
+                    {tab === "ado_sprint" && "ADO & SPRINT"}
+                    {tab === "team" && "TEAM"}
+                    {tab === "details" && "DETAILS"}
+                    {tab === "wsjf" && "WSJF"}
+                    {tab === "links" && "LINKS"}
+                    {tab === "notes" && "NOTES"}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mod-modal__body" style={{ overflowY: "auto", flex: 1 }}>
+              {modal === "create" && (
+                <>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_title")} <span>*</span></label>
+                    <input className="mod-input" value={form.title} onChange={e => setForm(f=>({...f,title:e.target.value}))} placeholder={t("backlog.placeholder_title")} />
+                  </div>
+                  <div className="mod-field-row">
+                    <div className="mod-field">
+                      <label className="mod-field__label">{t("backlog.field_type")}</label>
+                      <select className="mod-select" value={form.item_type_id} onChange={e => setForm(f=>({...f,item_type_id:e.target.value}))}>
+                        <option value="">{t("backlog.select_type")}</option>
+                        {itemTypes.map(tp=><option key={tp.item_type_id} value={tp.item_type_id}>{tp.name.toUpperCase()}</option>)}
+                      </select>
+                    </div>
+                    <div className="mod-field">
+                      <label className="mod-field__label">{t("backlog.field_status")}</label>
+                      <select className="mod-select" value={form.current_status} onChange={e => setForm(f=>({...f,current_status:e.target.value}))}>
+                        {STATUSES.map(s=><option key={s} value={s}>{s.replace("_"," ").toUpperCase()}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mod-field-row">
+                    <div className="mod-field">
+                      <label className="mod-field__label">{t("backlog.field_priority")}</label>
+                      <select className="mod-select" value={form.priority} onChange={e => setForm(f=>({...f,priority:e.target.value}))}>
+                        {[1,2,3,4,5].map(p=><option key={p} value={p}>{p} — {["CRITICAL","HIGH","MEDIUM","LOW","MINIMAL"][p-1]}</option>)}
+                      </select>
+                    </div>
+                    <div className="mod-field">
+                      <label className="mod-field__label">{t("backlog.field_story_points")}</label>
+                      <input className="mod-input" type="number" min="0" value={form.story_points} onChange={e => setForm(f=>({...f,story_points:e.target.value}))} placeholder={t("backlog.placeholder_sp")} />
+                    </div>
+                  </div>
+                  <div className="mod-field-row">
+                    <div className="mod-field" style={{ flex: "0 0 50%" }}>
+                      <label className="mod-field__label">{t("backlog.field_ado_id")}</label>
+                      <input className="mod-input" value={form.ado_id} onChange={e => setForm(f=>({...f,ado_id:e.target.value}))} placeholder={t("backlog.placeholder_ado")} />
+                    </div>
+                  </div>
+                  <div className="mod-field-row">
+                    <div className="mod-field">
+                      <label className="mod-field__label">{t("backlog.field_start_sprint")}</label>
+                      <select className="mod-select" value={(form as Record<string,string>).start_sprint_id ?? form.sprint_id} onChange={e => { const v=e.target.value; setForm(f=>({...f, sprint_id:v, start_sprint_id:v})); }}>
+                        <option value="">{t("backlog.select_sprint_none")}</option>
+                        {sprints.map(s=><option key={s.sprint_id} value={s.sprint_id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="mod-field">
+                      <label className="mod-field__label">{t("backlog.field_end_sprint")}</label>
+                      <select className="mod-select" value={(form as Record<string,string>).end_sprint_id ?? ""} onChange={e => setForm(f=>({...f,end_sprint_id:e.target.value}))}>
+                        <option value="">{t("backlog.select_sprint_none")}</option>
+                        {sprints.map(s=><option key={s.sprint_id} value={s.sprint_id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mod-field-row">
+                    <div className="mod-field">
+                      <label className="mod-field__label">{t("backlog.field_requester")}</label>
+                      <select className="mod-select" value={form.requester_stakeholder_id} onChange={e => setForm(f=>({...f,requester_stakeholder_id:e.target.value}))}>
+                        <option value="">{t("backlog.select_requester_none")}</option>
+                        {productStakeholders.map(s=><option key={s.stakeholder_id} value={s.stakeholder_id}>{s.full_name}</option>)}
+                      </select>
+                    </div>
+                    <div className="mod-field">
+                      <label className="mod-field__label">{t("backlog.field_assigned_to")}</label>
+                      <select className="mod-select" value={form.assigned_to_member_id} onChange={e => setForm(f=>({...f,assigned_to_member_id:e.target.value}))}>
+                        <option value="">{t("backlog.select_assigned_none")}</option>
+                        {teamMembers.map(m=><option key={m.member_id} value={m.member_id}>{m.full_name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_description")}</label>
+                    <textarea className="mod-textarea" value={form.description} onChange={e => setForm(f=>({...f,description:e.target.value}))} placeholder={t("backlog.placeholder_description")} />
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_acceptance")}</label>
+                    <textarea className="mod-textarea" value={form.acceptance_criteria} onChange={e => setForm(f=>({...f,acceptance_criteria:e.target.value}))} placeholder={t("backlog.placeholder_acceptance")} />
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_dod")}</label>
+                    <textarea className="mod-textarea" value={form.definition_of_done} onChange={e => setForm(f=>({...f,definition_of_done:e.target.value}))} placeholder={t("backlog.placeholder_dod")} />
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_business_value")}</label>
+                    <textarea className="mod-textarea" value={form.business_value} onChange={e => setForm(f=>({...f,business_value:e.target.value}))} placeholder={t("backlog.placeholder_business_value")} />
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_business_rules")}</label>
+                    <textarea className="mod-textarea" value={(form as Record<string,string>).business_rules ?? ""} onChange={e => setForm(f=>({...f,business_rules:e.target.value}))} placeholder={t("backlog.placeholder_business_rules")} />
+                  </div>
+                  <div style={{ borderTop: "1px solid rgba(0,212,255,0.15)", paddingTop: 12, marginTop: 4 }}>
+                    <div style={{ fontSize: 10, letterSpacing: 2, color: "#00d4ff", marginBottom: 10 }}>{t("backlog.wsjf_heading")}</div>
+                    <div className="mod-field-row">
+                      {([
+                        { key: "wsjf_business_value",   label: t("backlog.wsjf_business_value") },
+                        { key: "wsjf_time_criticality", label: t("backlog.wsjf_time_criticality") },
+                        { key: "wsjf_risk_reduction",   label: t("backlog.wsjf_risk_reduction") },
+                        { key: "wsjf_job_size",         label: t("backlog.wsjf_job_size") },
+                      ] as { key: string; label: string }[]).map(({ key, label }) => (
+                        <div key={key} className="mod-field">
+                          <label className="mod-field__label" style={{ fontSize: 9 }}>{label}</label>
+                          <select className="mod-select" value={(form as Record<string,string>)[key]}
+                            onChange={e => setForm(f=>({...f,[key]:e.target.value}))}>
+                            {FIB.map(n=><option key={n} value={n}>{n}</option>)}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                    {(() => {
+                      const score = calcWsjf(parseInt(form.wsjf_business_value,10)||1,parseInt(form.wsjf_time_criticality,10)||1,parseInt(form.wsjf_risk_reduction,10)||1,parseInt(form.wsjf_job_size,10)||1);
+                      const lbl = wsjfLabel(score, t);
+                      return (
+                        <div style={{ fontSize: 11, letterSpacing: 1, marginTop: 6 }}>
+                          {t("backlog.wsjf_score_label")} <span style={{ color: lbl.color, fontWeight: 700, fontSize: 16 }}>{score}</span>
+                          <span style={{ color: lbl.color, marginLeft: 8, fontSize: 9 }}>— {lbl.text}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </>
+              )}
+              {modal === "edit" && activeEditTab === "basic" && (
+              <>
               <div className="mod-field">
                 <label className="mod-field__label">{t("backlog.field_title")} <span>*</span></label>
                 <input className="mod-input" value={form.title} onChange={e => setForm(f=>({...f,title:e.target.value}))} placeholder={t("backlog.placeholder_title")} />
@@ -921,89 +1277,101 @@ export default function BacklogPage() {
                   <input className="mod-input" value={form.ado_id} onChange={e => setForm(f=>({...f,ado_id:e.target.value}))} placeholder={t("backlog.placeholder_ado")} />
                 </div>
               </div>
-              <div className="mod-field-row">
-                <div className="mod-field">
-                  <label className="mod-field__label">{t("backlog.field_start_sprint")}</label>
-                  <select className="mod-select" value={(form as Record<string,string>).start_sprint_id ?? form.sprint_id} onChange={e => { const v=e.target.value; setForm(f=>({...f, sprint_id:v, start_sprint_id:v})); }}>
-                    <option value="">{t("backlog.select_sprint_none")}</option>
-                    {sprints.map(s=><option key={s.sprint_id} value={s.sprint_id}>{s.name}</option>)}
-                  </select>
-                </div>
-                <div className="mod-field">
-                  <label className="mod-field__label">{t("backlog.field_end_sprint")}</label>
-                  <select className="mod-select" value={(form as Record<string,string>).end_sprint_id ?? ""} onChange={e => setForm(f=>({...f,end_sprint_id:e.target.value}))}>
-                    <option value="">{t("backlog.select_sprint_none")}</option>
-                    {sprints.map(s=><option key={s.sprint_id} value={s.sprint_id}>{s.name}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="mod-field-row">
-                <div className="mod-field">
-                  <label className="mod-field__label">{t("backlog.field_requester")}</label>
-                  <select className="mod-select" value={form.requester_stakeholder_id} onChange={e => setForm(f=>({...f,requester_stakeholder_id:e.target.value}))}>
-                    <option value="">{t("backlog.select_requester_none")}</option>
-                    {productStakeholders.map(s=><option key={s.stakeholder_id} value={s.stakeholder_id}>{s.full_name}</option>)}
-                  </select>
-                </div>
-                <div className="mod-field">
-                  <label className="mod-field__label">{t("backlog.field_assigned_to")}</label>
-                  <select className="mod-select" value={form.assigned_to_member_id} onChange={e => setForm(f=>({...f,assigned_to_member_id:e.target.value}))}>
-                    <option value="">{t("backlog.select_assigned_none")}</option>
-                    {teamMembers.map(m=><option key={m.member_id} value={m.member_id}>{m.full_name}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="mod-field">
-                <label className="mod-field__label">{t("backlog.field_description")}</label>
-                <textarea className="mod-textarea" value={form.description} onChange={e => setForm(f=>({...f,description:e.target.value}))} placeholder={t("backlog.placeholder_description")} />
-              </div>
-              <div className="mod-field">
-                <label className="mod-field__label">{t("backlog.field_acceptance")}</label>
-                <textarea className="mod-textarea" value={form.acceptance_criteria} onChange={e => setForm(f=>({...f,acceptance_criteria:e.target.value}))} placeholder={t("backlog.placeholder_acceptance")} />
-              </div>
-              <div className="mod-field">
-                <label className="mod-field__label">{t("backlog.field_dod")}</label>
-                <textarea className="mod-textarea" value={form.definition_of_done} onChange={e => setForm(f=>({...f,definition_of_done:e.target.value}))} placeholder={t("backlog.placeholder_dod")} />
-              </div>
-              <div className="mod-field">
-                <label className="mod-field__label">{t("backlog.field_business_value")}</label>
-                <textarea className="mod-textarea" value={form.business_value} onChange={e => setForm(f=>({...f,business_value:e.target.value}))} placeholder={t("backlog.placeholder_business_value")} />
-              </div>
-              <div className="mod-field">
-                <label className="mod-field__label">{t("backlog.field_business_rules")}</label>
-                <textarea className="mod-textarea" value={(form as Record<string,string>).business_rules ?? ""} onChange={e => setForm(f=>({...f,business_rules:e.target.value}))} placeholder={t("backlog.placeholder_business_rules")} />
-              </div>
-              <div style={{ borderTop: "1px solid rgba(0,212,255,0.15)", paddingTop: 12, marginTop: 4 }}>
-                <div style={{ fontSize: 10, letterSpacing: 2, color: "#00d4ff", marginBottom: 10 }}>{t("backlog.wsjf_heading")}</div>
+              </>
+              )}
+              {modal === "edit" && activeEditTab === "ado_sprint" && (
                 <div className="mod-field-row">
-                  {([
-                    { key: "wsjf_business_value",   label: t("backlog.wsjf_business_value") },
-                    { key: "wsjf_time_criticality", label: t("backlog.wsjf_time_criticality") },
-                    { key: "wsjf_risk_reduction",   label: t("backlog.wsjf_risk_reduction") },
-                    { key: "wsjf_job_size",         label: t("backlog.wsjf_job_size") },
-                  ] as { key: string; label: string }[]).map(({ key, label }) => (
-                    <div key={key} className="mod-field">
-                      <label className="mod-field__label" style={{ fontSize: 9 }}>{label}</label>
-                      <select className="mod-select" value={(form as Record<string,string>)[key]}
-                        onChange={e => setForm(f=>({...f,[key]:e.target.value}))}>
-                        {FIB.map(n=><option key={n} value={n}>{n}</option>)}
-                      </select>
-                    </div>
-                  ))}
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_start_sprint")}</label>
+                    <select className="mod-select" value={(form as Record<string,string>).start_sprint_id ?? form.sprint_id} onChange={e => { const v=e.target.value; setForm(f=>({...f, sprint_id:v, start_sprint_id:v})); }}>
+                      <option value="">{t("backlog.select_sprint_none")}</option>
+                      {sprints.map(s=><option key={s.sprint_id} value={s.sprint_id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_end_sprint")}</label>
+                    <select className="mod-select" value={(form as Record<string,string>).end_sprint_id ?? ""} onChange={e => setForm(f=>({...f,end_sprint_id:e.target.value}))}>
+                      <option value="">{t("backlog.select_sprint_none")}</option>
+                      {sprints.map(s=><option key={s.sprint_id} value={s.sprint_id}>{s.name}</option>)}
+                    </select>
+                  </div>
                 </div>
-                {(() => {
-                  const score = calcWsjf(parseInt(form.wsjf_business_value,10)||1,parseInt(form.wsjf_time_criticality,10)||1,parseInt(form.wsjf_risk_reduction,10)||1,parseInt(form.wsjf_job_size,10)||1);
-                  const lbl = wsjfLabel(score, t);
-                  return (
-                    <div style={{ fontSize: 11, letterSpacing: 1, marginTop: 6 }}>
-                      {t("backlog.wsjf_score_label")} <span style={{ color: lbl.color, fontWeight: 700, fontSize: 16 }}>{score}</span>
-                      <span style={{ color: lbl.color, marginLeft: 8, fontSize: 9 }}>— {lbl.text}</span>
-                    </div>
-                  );
-                })()}
-              </div>
+              )}
+              {modal === "edit" && activeEditTab === "team" && (
+                <div className="mod-field-row">
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_requester")}</label>
+                    <select className="mod-select" value={form.requester_stakeholder_id} onChange={e => setForm(f=>({...f,requester_stakeholder_id:e.target.value}))}>
+                      <option value="">{t("backlog.select_requester_none")}</option>
+                      {productStakeholders.map(s=><option key={s.stakeholder_id} value={s.stakeholder_id}>{s.full_name}</option>)}
+                    </select>
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_assigned_to")}</label>
+                    <select className="mod-select" value={form.assigned_to_member_id} onChange={e => setForm(f=>({...f,assigned_to_member_id:e.target.value}))}>
+                      <option value="">{t("backlog.select_assigned_none")}</option>
+                      {teamMembers.map(m=><option key={m.member_id} value={m.member_id}>{m.full_name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+              {modal === "edit" && activeEditTab === "details" && (
+                <>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_description")}</label>
+                    <textarea className="mod-textarea" value={form.description} onChange={e => setForm(f=>({...f,description:e.target.value}))} placeholder={t("backlog.placeholder_description")} />
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_acceptance")}</label>
+                    <textarea className="mod-textarea" value={form.acceptance_criteria} onChange={e => setForm(f=>({...f,acceptance_criteria:e.target.value}))} placeholder={t("backlog.placeholder_acceptance")} />
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_dod")}</label>
+                    <textarea className="mod-textarea" value={form.definition_of_done} onChange={e => setForm(f=>({...f,definition_of_done:e.target.value}))} placeholder={t("backlog.placeholder_dod")} />
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_business_value")}</label>
+                    <textarea className="mod-textarea" value={form.business_value} onChange={e => setForm(f=>({...f,business_value:e.target.value}))} placeholder={t("backlog.placeholder_business_value")} />
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">{t("backlog.field_business_rules")}</label>
+                    <textarea className="mod-textarea" value={(form as Record<string,string>).business_rules ?? ""} onChange={e => setForm(f=>({...f,business_rules:e.target.value}))} placeholder={t("backlog.placeholder_business_rules")} />
+                  </div>
+                </>
+              )}
+              {modal === "edit" && activeEditTab === "wsjf" && (
+                <div style={{ borderTop: "1px solid rgba(0,212,255,0.15)", paddingTop: 12, marginTop: 4 }}>
+                  <div style={{ fontSize: 10, letterSpacing: 2, color: "#00d4ff", marginBottom: 10 }}>{t("backlog.wsjf_heading")}</div>
+                  <div className="mod-field-row">
+                    {([
+                      { key: "wsjf_business_value",   label: t("backlog.wsjf_business_value") },
+                      { key: "wsjf_time_criticality", label: t("backlog.wsjf_time_criticality") },
+                      { key: "wsjf_risk_reduction",   label: t("backlog.wsjf_risk_reduction") },
+                      { key: "wsjf_job_size",         label: t("backlog.wsjf_job_size") },
+                    ] as { key: string; label: string }[]).map(({ key, label }) => (
+                      <div key={key} className="mod-field">
+                        <label className="mod-field__label" style={{ fontSize: 9 }}>{label}</label>
+                        <select className="mod-select" value={(form as Record<string,string>)[key]}
+                          onChange={e => setForm(f=>({...f,[key]:e.target.value}))}>
+                          {FIB.map(n=><option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                  {(() => {
+                    const score = calcWsjf(parseInt(form.wsjf_business_value,10)||1,parseInt(form.wsjf_time_criticality,10)||1,parseInt(form.wsjf_risk_reduction,10)||1,parseInt(form.wsjf_job_size,10)||1);
+                    const lbl = wsjfLabel(score, t);
+                    return (
+                      <div style={{ fontSize: 11, letterSpacing: 1, marginTop: 6 }}>
+                        {t("backlog.wsjf_score_label")} <span style={{ color: lbl.color, fontWeight: 700, fontSize: 16 }}>{score}</span>
+                        <span style={{ color: lbl.color, marginLeft: 8, fontSize: 9 }}>— {lbl.text}</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
-            {modal === "edit" && editing && (<>
+            {modal === "edit" && editing && activeEditTab === "links" && (
               <div style={{ borderTop: "1px solid rgba(0,212,255,0.15)", paddingTop: 14, marginTop: 4 }}>
                 <div style={{ fontSize: 10, letterSpacing: 2, color: "#00d4ff", marginBottom: 10 }}>{t("backlog.links_heading")}</div>
                 {loadingLinks ? <div style={{ color: DIM, fontSize: 11 }}>{t("backlog.loading")}</div> : (<>
@@ -1041,40 +1409,79 @@ export default function BacklogPage() {
                   </div>
                 </>)}
               </div>
+            )}
+            {modal === "edit" && editing && activeEditTab === "notes" && (
               <div style={{ borderTop: "1px solid rgba(0,212,255,0.15)", paddingTop: 14, marginTop: 4 }}>
-                <div style={{ fontSize: 10, letterSpacing: 2, color: "#00d4ff", marginBottom: 10 }}>{t("backlog.notes_heading")}</div>
-                {loadingNotes ? <div style={{ color: DIM, fontSize: 11 }}>{t("backlog.loading")}</div> : (
-                  <div style={{ maxHeight: 200, overflowY: "auto", marginBottom: 10 }}>
-                    {notes.length === 0
-                      ? <div style={{ color: DIM, fontSize: 11, fontStyle: "italic" }}>{t("backlog.notes_empty")}</div>
-                      : notes.map(n => (
-                        <div key={n.note_id} style={{ borderBottom: "1px solid rgba(0,212,255,0.08)", paddingBottom: 8, marginBottom: 8 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 10, color: "#00d4ff", fontWeight: 700, marginBottom: 2 }}>{n.author}</div>
-                              <div style={{ fontSize: 12, color: "#c8d8e8", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{n.content}</div>
-                              <div style={{ fontSize: 9, color: DIM, marginTop: 3 }}>{new Date(n.created_at).toLocaleString()}</div>
-                            </div>
-                            <button className="btn-icon btn-icon--danger" style={{ fontSize: 9, padding: "2px 6px", marginLeft: 8, flexShrink: 0 }}
-                              onClick={() => handleDeleteNote(editing.item_id, n.note_id)}>✕</button>
-                          </div>
-                        </div>
-                      ))
-                    }
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 10, letterSpacing: 2, color: "#00d4ff", marginBottom: 6 }}>{t("backlog.notes_heading")}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#c8d8e8", marginBottom: 4 }}>{editing.title}</div>
+                    <div style={{ fontSize: 11, color: DIM }}>{t("backlog.notes_panel_hint")}</div>
                   </div>
-                )}
-                <div className="mod-field">
-                  <label className="mod-field__label" style={{ fontSize: 9 }}>{t("backlog.note_content")}</label>
-                  <textarea className="mod-textarea" style={{ fontSize: 11, minHeight: 60 }} value={noteContent}
-                    onChange={e => setNoteContent(e.target.value)} placeholder={t("backlog.note_content_placeholder")} />
                 </div>
-                <button className="btn-save" style={{ marginTop: 6, fontSize: 10, padding: "6px 14px" }}
-                  onClick={() => handleAddNote(editing.item_id)}
-                  disabled={savingNote || !noteContent.trim()}>
-                  {savingNote ? t("backlog.btn_saving") : t("backlog.note_btn_add")}
-                </button>
+                <div style={{ border: "1px solid rgba(0,212,255,0.2)", padding: "14px 12px", background: "rgba(0,212,255,0.02)" }}>
+                  <div style={{ fontSize: 11, color: "#00d4ff", letterSpacing: 1, marginBottom: 12 }}>{t("backlog.notes_heading")}</div>
+                  {loadingNotes ? <div style={{ color: DIM, fontSize: 11 }}>{t("backlog.loading")}</div> : (
+                    <>
+                      <div style={{ marginBottom: 14, color: notes.length === 0 ? DIM : "#c8d8e8", fontSize: 11, textTransform: "uppercase" }}>
+                        {notes.length === 0 ? t("backlog.notes_empty_upper") : t("backlog.notes_records_count", { count: notes.length })}
+                      </div>
+                      <div style={{ maxHeight: 220, overflowY: "auto", marginBottom: 14, borderBottom: "1px solid rgba(0,212,255,0.08)", paddingBottom: 10 }}>
+                        {notes.length === 0
+                          ? null
+                          : notes.map(n => (
+                            <div key={n.note_id} style={{ borderBottom: "1px solid rgba(0,212,255,0.08)", paddingBottom: 10, marginBottom: 10 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 10, color: "#00d4ff", fontWeight: 700, marginBottom: 3 }}>{n.author}</div>
+                                  <div style={{ fontSize: 12, color: "#c8d8e8", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{n.content}</div>
+                                  <div style={{ fontSize: 9, color: DIM, marginTop: 4 }}>{new Date(n.created_at).toLocaleString()}</div>
+                                </div>
+                                <button className="btn-icon btn-icon--danger" style={{ fontSize: 9, padding: "2px 6px", flexShrink: 0 }}
+                                  onClick={() => handleDeleteNote(editing.item_id, n.note_id)}>✕</button>
+                              </div>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    </>
+                  )}
+                  <div className="mod-field-row">
+                    <div className="mod-field">
+                      <label className="mod-field__label">TIPO</label>
+                      <select className="mod-select" disabled value="information">
+                        <option value="information">INFORMATION</option>
+                      </select>
+                    </div>
+                    <div className="mod-field">
+                      <label className="mod-field__label">STATUS</label>
+                      <select className="mod-select" value={form.current_status} onChange={e => setForm(f=>({...f,current_status:e.target.value}))}>
+                        {STATUSES.map(s=><option key={s} value={s}>{s.replace("_"," ").toUpperCase()}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mod-field">
+                    <label className="mod-field__label">REGISTRO</label>
+                    <textarea className="mod-textarea" style={{ fontSize: 11, minHeight: 80 }} value={noteContent}
+                      onChange={e => setNoteContent(e.target.value)} placeholder={t("backlog.note_content_placeholder")} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "#c8d8e8" }}>
+                      <input type="checkbox" disabled />
+                      GERAR FOLLOW-UP PARA ACOMPANHAMENTO
+                    </label>
+                    <button className="btn-save" style={{ fontSize: 10, padding: "8px 16px" }}
+                      onClick={() => handleAddNote(editing.item_id)}
+                      disabled={savingNote || !noteContent.trim()}>
+                      {savingNote ? t("backlog.btn_saving") : "ADICIONAR AO HISTÓRICO"}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 10, color: DIM, marginTop: 14 }}>
+                    {notes.length} {t("backlog.notes_records_footer")}
+                  </div>
+                </div>
               </div>
-            </>)}
+            )}
             <div className="mod-modal__footer">
               <button className="btn-cancel" onClick={closeModal}>{t("backlog.btn_cancel")}</button>
               <button className="btn-save" onClick={handleSave} disabled={saving||!form.title.trim()}>

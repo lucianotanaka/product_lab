@@ -1,0 +1,167 @@
+/* ═══════════════════════════════════════════════════════════════════
+   hud-cockpit.css — Dashboard / Cockpit (NTT360 Design)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Cockpit section already styled in hud.css.
+   This file extends with additional NTT360 dashboard styles. */
+
+/* ── Cockpit container override ── */
+#cockpit {
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Product header ── */
+.cockpit-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 28px;
+}
+
+.cockpit-product-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.cockpit-product-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 500px;
+}
+
+/* ── Metrics grid ── */
+.cockpit-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+/* Gauge re-skin for NTT360 */
+.cockpit-gauge {
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 12px;
+  min-width: 88px;
+  cursor: pointer;
+  transition: all var(--transition);
+  gap: 6px;
+}
+
+.cockpit-gauge:hover {
+  border-color: var(--color-blue-ntt);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.cockpit-gauge__track { stroke: var(--border-strong); }
+
+.cockpit-gauge__value {
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cockpit-gauge__label {
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.3;
+  max-width: 80px;
+  font-weight: 500;
+}
+
+/* ── Attention items ── */
+.cockpit-attention {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-top: 0;
+}
+
+.cockpit-attention__header {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cockpit-attention__header .section-eyebrow {
+  font-size: 10px;
+  color: var(--text-secondary);
+  letter-spacing: 1.5px;
+  border-left: none;
+  padding: 0;
+  margin: 0;
+}
+
+.attention-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-left: 3px solid var(--att-color, var(--color-blue-ntt));
+  border-radius: 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--transition);
+  width: 100%;
+  text-align: left;
+  margin-bottom: 0;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+.attention-item:last-child { border-bottom: none; }
+.attention-item:hover { background: var(--bg-surface); }
+
+.attention-item__icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+}
+
+.attention-item__body { flex: 1; min-width: 0; }
+.attention-item__type {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+  margin-bottom: 2px;
+}
+.attention-item__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attention-item__detail {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attention-item__arrow { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }

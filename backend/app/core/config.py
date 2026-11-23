@@ -1,36 +1,62 @@
 import os
 from functools import lru_cache
 from typing import List
-from dotenv import load_dotenv, find_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Busca o .env subindo os diretórios a partir de config.py (mais robusto que path relativo)
-_env_file = find_dotenv(usecwd=True) or os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env"
+# Localiza o .env subindo os diretórios (compatível com execução local e Docker)
+_env_file = os.environ.get(
+    "ENV_FILE",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env"),
 )
-load_dotenv(_env_file, override=False)
 
-class Settings:
-    APP_ENV: str          = os.getenv("APP_ENV", "development")
-    DEBUG: bool           = os.getenv("DEBUG", "true").lower() == "true"
-    SECRET_KEY: str       = os.getenv("SECRET_KEY", "product-lab-secret-key")
-    API_V1_PREFIX: str    = "/api/v1"
-    PROJECT_NAME: str     = "Product Lab API"
-    VERSION: str          = "1.0.0"
-    
-    # Configurações de Banco de Dados purificadas (sem fallbacks contendo credenciais expostas)
-    DATABASE_URL: str      = os.getenv("DATABASE_URL")
-    DATABASE_URL_SYNC: str = os.getenv("DATABASE_URL_SYNC")
-    
-    DB_POOL_SIZE: int      = int(os.getenv("DB_POOL_SIZE", "10"))
-    DB_MAX_OVERFLOW: int  = int(os.getenv("DB_MAX_OVERFLOW", "20"))
-    ALLOWED_ORIGINS: List[str] = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
 
-    # OpenAI
-    OPENAI_API_KEY: str    = os.getenv("OPENAI_API_KEY", "")
-    OPENAI_MODEL: str      = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+class Settings(BaseSettings):
+    # ── Ambiente ──────────────────────────────────────────────────────────────
+    APP_ENV: str = "development"
+    DEBUG: bool = True
+
+    # ── Segurança — SECRET_KEY obrigatória (sem fallback) ────────────────────
+    SECRET_KEY: str  # sem default: ValueError na startup se não definida
+
+    # ── API ───────────────────────────────────────────────────────────────────
+    API_V1_PREFIX: str = "/api/v1"
+    PROJECT_NAME: str = "Product Lab API"
+    VERSION: str = "1.0.0"
+
+    # ── Banco de dados — obrigatório ──────────────────────────────────────────
+    DATABASE_URL: str  # sem default: ValueError na startup se não definida
+    DATABASE_URL_SYNC: str = ""
+
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+
+    # ── CORS — armazenado como str CSV para evitar json.loads do pydantic-settings
+    # Use a property allowed_origins_list para obter List[str]
+    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+
+    @property
+    def allowed_origins_list(self) -> List[str]:
+        """Retorna ALLOWED_ORIGINS como lista, aceitando CSV ou JSON array."""
+        v = self.ALLOWED_ORIGINS.strip()
+        if v.startswith("["):
+            import json
+            return json.loads(v)
+        return [o.strip() for o in v.split(",") if o.strip()]
+
+    # ── OpenAI ────────────────────────────────────────────────────────────────
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
+
+    model_config = SettingsConfigDict(
+        env_file=_env_file,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
 
 @lru_cache()
 def get_settings() -> Settings:
-    return Settings()
+    return Settings()  # type: ignore[call-arg]
+
 
 settings = get_settings()

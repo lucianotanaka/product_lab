@@ -13,7 +13,11 @@ class BacklogItem(Base):
     end_sprint_id            = Column(Integer, nullable=True)  # sprint de término
     requester_stakeholder_id = Column(Integer, nullable=True)  # FK → stakeholders.stakeholder_id
     assigned_to_member_id    = Column(Integer, nullable=True)  # FK → team_members.member_id
+    management_owner_member_id = Column(Integer, nullable=True)  # owner manual no Product Lab
+    discovery_opportunity_id = Column(String(36), nullable=True, index=True)  # FK → discovery_opportunities.id
     ado_id                   = Column(String(50))
+    ado_work_item_type       = Column(String(100), nullable=True)
+    enabler_type             = Column(String(100), nullable=True)
     item_type_id        = Column(Integer, nullable=True)     # FK → backlog_item_types.item_type_id
     title               = Column(String(250), nullable=False)
     description         = Column(Text)
@@ -25,10 +29,10 @@ class BacklogItem(Base):
     story_points        = Column(Integer)
     priority            = Column(Integer, default=3)
     # WSJF components (Weighted Shortest Job First)
-    wsjf_business_value   = Column(Integer, default=1)
-    wsjf_time_criticality = Column(Integer, default=1)
-    wsjf_risk_reduction   = Column(Integer, default=1)
-    wsjf_job_size         = Column(Integer, default=1)
+    wsjf_business_value   = Column(Integer, default=0)
+    wsjf_time_criticality = Column(Integer, default=0)
+    wsjf_risk_reduction   = Column(Integer, default=0)
+    wsjf_job_size         = Column(Integer, default=0)
     wsjf_score            = Column(Numeric(6, 2), default=0.0)  # (bv + tc + rr) / job_size, 1 decimal
     created_at            = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at          = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -70,14 +74,17 @@ class BacklogItemLink(Base):
 
 
 class BacklogItemNote(Base):
-    """Anotações e histórico de um item do backlog."""
+    """Anotações e histórico compartilhados de um item do backlog."""
     __tablename__ = "backlog_item_notes"
-    note_id    = Column(Integer, primary_key=True, autoincrement=True)
-    item_id    = Column(Integer, nullable=False, index=True)  # FK → backlog_items.item_id
-    author     = Column(String(150), nullable=False)
-    content    = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    note_id         = Column(Integer, primary_key=True, autoincrement=True)
+    item_id         = Column(Integer, nullable=False, index=True)  # FK → backlog_items.item_id
+    author          = Column(String(150), nullable=False)
+    content         = Column(Text, nullable=False)
+    note_type       = Column(String(50), nullable=False, default="information")
+    status          = Column(String(30), nullable=False, default="open")
+    followup_id     = Column(String(36), nullable=True, index=True)
+    created_at      = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at      = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class BacklogItemSuggestion(Base):

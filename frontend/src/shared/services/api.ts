@@ -1,19 +1,27 @@
 const API = import.meta.env.VITE_API_URL || "/api/v1";
 
-function getToken(): string {
-  return localStorage.getItem("pl_token") || "";
+export class ApiError extends Error {
+  status: number;
+  body: string;
+
+  constructor(message: string, status: number, body = "") {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
 }
 
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = getToken();
   const res = await fetch(`${API}${path}`, {
     ...options,
+    credentials: "include", // envia o cookie httpOnly pl_token automaticamente
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      // Authorization header removido — autenticação agora via cookie httpOnly
       ...(options.headers || {}),
     },
   });
@@ -27,7 +35,7 @@ export async function apiFetch<T>(
     } catch {
       detail = raw || detail;
     }
-    throw new Error(detail);
+    throw new ApiError(detail, res.status, raw);
   }
 
   if (res.status === 204) return null as T;

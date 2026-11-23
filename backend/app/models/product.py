@@ -14,12 +14,13 @@ class ProductStatus(str, Enum):
 
 class Product(Base):
     __tablename__ = "products"
-    product_id  = Column(Integer, primary_key=True, autoincrement=True)
-    name        = Column(String(150), nullable=False, index=True)
-    description = Column(Text)
-    is_active      = Column(Boolean, default=True)
-    status         = Column(SAE(ProductStatus), default=ProductStatus.active, nullable=False)
-    owner_user_id  = Column(Integer, ForeignKey("users.user_id"), nullable=True)
-    tags           = Column(ARRAY(String))
-    created_at  = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    product_id    = Column(Integer, primary_key=True, autoincrement=True)
+    company_id    = Column(Integer, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True, index=True)
+    name          = Column(String(150), nullable=False, index=True)
+    description   = Column(Text)
+    is_active     = Column(Boolean, default=True)
+    status        = Column(SAE(ProductStatus), default=ProductStatus.active, nullable=False)
+    owner_user_id = Column(Integer, ForeignKey("users.user_id"), nullable=True)
+    tags          = Column(ARRAY(String))
+    created_at    = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at    = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

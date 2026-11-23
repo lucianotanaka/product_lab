@@ -1,0 +1,427 @@
+/* ═══════════════════════════════════════════════════════════════════
+   hud-sections.css — Module Cards, Stats, Section Headers (NTT360)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Section Header ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.section-header__line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.section-header__content {
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-blue-ntt);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding: 2px 10px;
+  border-left: 2px solid var(--color-cyan);
+}
+
+.section-title {
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.section-title--accent {
+  color: var(--color-blue-ntt);
+  background: none;
+  -webkit-text-fill-color: var(--color-blue-ntt);
+}
+[data-theme="light"] .section-title--accent { color: var(--color-blue-ntt); }
+
+/* ── Module List Layout ── */
+.pl-modules {
+  padding: 72px var(--section-px);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* ── NTT360 Module Card ─────────────────────────────────────────────
+   Inspired by NTT360 menu: white card, blue icon, title, desc, link
+   ──────────────────────────────────────────────────────────────────── */
+.module-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  cursor: pointer;
+  transition: all var(--transition);
+  overflow: hidden;
+  text-align: left;
+}
+
+.module-card::before { display: none; }
+
+.module-card:hover {
+  border-color: var(--color-blue-ntt);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Light mode card hover */
+[data-theme="light"] .module-card { background: #fff; }
+[data-theme="light"] .module-card:hover { box-shadow: 0 4px 16px rgba(21,101,192,0.12); }
+
+/* Remove old HUD corner brackets */
+.module-card__corner { display: none; }
+.module-card__drag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: grab;
+  transition: color var(--transition);
+  user-select: none;
+  touch-action: none;
+  opacity: 0;
+}
+.module-card:hover .module-card__drag { opacity: 0.7; }
+.module-card__drag:active { cursor: grabbing; color: var(--color-blue-ntt); }
+.module-card--dragging { border-color: var(--color-blue-ntt) !important; box-shadow: var(--shadow-lg) !important; }
+
+/* Card icon — NTT360 blue square with icon */
+.module-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.module-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: rgba(21,101,192,0.12);
+  font-size: 22px;
+  color: var(--color-blue-ntt);
+  flex-shrink: 0;
+  transition: background var(--transition);
+}
+.module-card:hover .module-card__icon {
+  background: var(--color-blue-ntt);
+  color: #fff;
+}
+[data-theme="light"] .module-card__icon { background: rgba(21,101,192,0.08); }
+
+/* Status badge */
+.module-card__status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid;
+  text-transform: uppercase;
+}
+.module-card__status--ativo   { color: var(--color-success); background: rgba(34,197,94,0.1);  border-color: rgba(34,197,94,0.2); }
+.module-card__status--sync    { color: var(--color-warning); background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.2); }
+.module-card__status--standby { color: var(--text-muted);    background: var(--bg-surface);    border-color: var(--border); }
+
+.module-card__status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Card content */
+.module-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  letter-spacing: 0;
+}
+
+.module-card__desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+/* Footer with explore link */
+.module-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.module-card__bar {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.module-card__bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--color-blue-ntt);
+  border-radius: 1px;
+  animation: barFill 2s ease forwards;
+  animation-delay: 0.3s;
+}
+
+.module-card__link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-blue-ntt);
+  white-space: nowrap;
+  transition: color var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.module-card__link::after { content: '→'; }
+.module-card:hover .module-card__link { color: var(--color-cyan); }
+
+/* ── Science theme overrides — all neutralized to NTT360 blue ── */
+[data-science] .module-card:hover { border-color: var(--color-blue-ntt) !important; box-shadow: var(--shadow-md) !important; }
+[data-science] .module-card:hover .module-card__link { color: var(--color-blue-ntt) !important; }
+
+/* ── Category Header ── */
+.module-category-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+/* ── Science Atmosphere (neutralized) ── */
+.science-atmosphere { display: none; }
+
+/* ── Category tabs — NTT360 style ── */
+[data-science] { background: unset; }
+[data-science]::before { display: none !important; }
+
+/* Section eyebrow color overrides per science (neutralized) */
+[data-science] .section-eyebrow { color: var(--color-blue-ntt); }
+
+/* ── Section dividers ── */
+[data-science] .section-header__line { background: var(--border); }
+
+/* ── Science badge ── */
+.science-badge {
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  margin-left: 6px;
+  opacity: 0.6;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+}
+
+/* ── Module Header (top-bar-style accent) — neutralized ── */
+[data-science] .mod-header { border-left-color: var(--color-blue-ntt) !important; color: var(--text-primary) !important; }
+
+/* ── BTN science overrides ── */
+[data-science] .btn-sci { border-color: var(--color-blue-ntt); color: var(--color-blue-ntt); }
+[data-science] .btn-sci:hover { background: rgba(21,101,192,0.08); }
+
+/* ── Cockpit Gauge ── */
+.cockpit-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform var(--transition);
+  padding: 12px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  min-width: 90px;
+}
+.cockpit-gauge:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.cockpit-gauge__ring { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+.cockpit-gauge__svg { width: 72px; height: 72px; transform: rotate(-90deg); }
+.cockpit-gauge__track { fill: none; stroke: var(--border); stroke-width: 5; }
+.cockpit-gauge__arc { fill: none; stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 1.2s ease; }
+.cockpit-gauge__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.cockpit-gauge__icon { font-size: 11px; line-height: 1; margin-bottom: 1px; }
+.cockpit-gauge__value { font-family: var(--font-body); font-size: 18px; font-weight: 800; line-height: 1; }
+.cockpit-gauge__label { font-family: var(--font-body); font-size: 10px; color: var(--text-secondary); text-align: center; line-height: 1.3; max-width: 80px; font-weight: 500; }
+
+/* ── Lang & Theme controls ── */
+.lang-selector { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+
+.lang-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: 1px solid transparent;
+  color: rgba(255,255,255,0.5);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 4px 7px;
+  cursor: pointer;
+  transition: all var(--transition);
+  border-radius: var(--radius-sm);
+}
+.lang-btn__flag { font-size: 12px; }
+.lang-btn:hover { color: #fff; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); }
+.lang-btn--active { color: var(--color-cyan); border-color: rgba(0,196,212,0.35); background: rgba(0,196,212,0.08); }
+
+.theme-toggle {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.7);
+  font-size: 14px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); color: #fff; }
+
+/* ── About section ── */
+.pl-about .section-eyebrow { text-align: left; display: inline-flex; }
+
+/* ── Contact section ── */
+.contact-subtitle { color: var(--text-secondary); }
+
+/* ── Home section visual refinement ── */
+.pl-admin,
+.pl-stats,
+.pl-about {
+  position: relative;
+  overflow: hidden;
+}
+
+.pl-admin::before,
+.pl-stats::before,
+.pl-about::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top center, rgba(0,196,212,0.08), transparent 42%),
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+}
+
+.pl-admin {
+  margin-top: 24px;
+  padding-top: 56px;
+  border-top: 1px solid rgba(255,153,0,0.14);
+  background:
+    linear-gradient(180deg, rgba(255,153,0,0.04), rgba(255,153,0,0.01)),
+    rgba(8,18,32,0.22);
+  border-radius: 28px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.pl-stats {
+  padding: 72px var(--section-px) 84px;
+  margin: 32px auto 0;
+  width: 100%;
+  max-width: var(--content-max);
+  border-top: 1px solid rgba(37,99,235,0.16);
+  background:
+    linear-gradient(180deg, rgba(21,101,192,0.05), rgba(21,101,192,0.015)),
+    rgba(10,22,38,0.18);
+  border-radius: 28px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.pl-about {
+  margin-top: 40px;
+  padding-top: 72px;
+  border-top: 1px solid rgba(0,196,212,0.12);
+}
+
+.pl-admin .modules-grid,
+.pl-stats .stats-grid,
+.pl-about .about-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.pl-admin .module-card,
+.pl-stats .stat-card {
+  backdrop-filter: blur(10px);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.015)),
+    var(--bg-card);
+}
+
+.pl-admin .module-card {
+  max-width: none;
+}
+
+.pl-stats .section-header,
+.pl-about .section-header,
+.pl-admin .section-header {
+  margin-bottom: 48px;
+}
+
+.pl-stats .section-header__line {
+  background: linear-gradient(90deg, transparent, rgba(37,99,235,0.32), transparent);
+}
+
+.pl-admin .section-header__line {
+  background: linear-gradient(90deg, transparent, rgba(255,153,0,0.28), transparent);
+}
+
+.pl-about .section-header__line {
+  background: linear-gradient(90deg, transparent, rgba(0,196,212,0.24), transparent);
+}

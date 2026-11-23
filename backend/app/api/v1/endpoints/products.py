@@ -13,9 +13,20 @@ router = APIRouter()
 
 
 @router.get("", response_model=Paginated)
-def list_products(page: int = 1, size: int = 20, status: Optional[ProductStatus] = None, db: Session = Depends(get_db)):
-    repo = BaseRepository(Product, db)
-    total, items = repo.list(skip=(page - 1) * size, limit=size, status=status)
+def list_products(
+    page: int = 1,
+    size: int = 20,
+    status: Optional[ProductStatus] = None,
+    company_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    q = db.query(Product)
+    if status:
+        q = q.filter(Product.status == status)
+    if company_id is not None:
+        q = q.filter(Product.company_id == company_id)
+    total = q.count()
+    items = q.order_by(Product.name).offset((page - 1) * size).limit(size).all()
     return {"total": total, "page": page, "size": size, "items": [ProductOut.model_validate(i) for i in items]}
 
 

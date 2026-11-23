@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:16
+    container_name: productlab_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: productlab
+      POSTGRES_PASSWORD: prdctmngr@2026
+      POSTGRES_DB: product_lab
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U productlab -d product_lab"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build: ./backend
+    container_name: productlab_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # @ na senha deve ser URL-encoded como %40 na connection string
+      DATABASE_URL: postgresql://productlab:prdctmngr%402026@db:5432/product_lab
+      APP_ENV: production
+      DEBUG: "false"
+      SECRET_KEY: ${SECRET_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: productlab_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-/api/v1}
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

@@ -8,7 +8,8 @@ engine = create_engine(
     pool_size=settings.DB_POOL_SIZE,
     max_overflow=settings.DB_MAX_OVERFLOW,
     pool_pre_ping=True,
-    echo=settings.DEBUG,
+    # echo somente em desenvolvimento local — nunca em produção (evita logs de queries com dados sensíveis)
+    echo=settings.DEBUG and settings.APP_ENV == "development",
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

@@ -397,6 +397,10 @@
 .mod-select:focus { border-color: #00d4ff; background: rgba(0,212,255,0.06); }
 .mod-textarea { min-height: 80px; resize: vertical; }
 .mod-select option { background: #0a0f1e; }
+.mod-input option {
+  background: #0a0f1e;
+  color: #c0cfe0;
+}
 .mod-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .mod-field-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
@@ -615,10 +619,22 @@
   50% { opacity: 0.5; }
 }
 
-/* Scrollbar */
+/* Scrollbar — modal */
 .mod-modal::-webkit-scrollbar { width: 4px; }
 .mod-modal::-webkit-scrollbar-track { background: transparent; }
-.mod-modal::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); }
+.mod-modal::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 2px; }
+
+/* Scrollbar — table wrap and inner scrollable children */
+.mod-table-wrap::-webkit-scrollbar,
+.mod-table-wrap > div::-webkit-scrollbar { width: 3px; height: 3px; }
+.mod-table-wrap::-webkit-scrollbar-track,
+.mod-table-wrap > div::-webkit-scrollbar-track { background: transparent; }
+.mod-table-wrap::-webkit-scrollbar-thumb,
+.mod-table-wrap > div::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.2); border-radius: 2px; }
+.mod-table-wrap::-webkit-scrollbar-thumb:hover,
+.mod-table-wrap > div::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.4); }
+.mod-table-wrap::-webkit-scrollbar-corner,
+.mod-table-wrap > div::-webkit-scrollbar-corner { background: transparent; }
 
 /* ── Language Selector (módulos) ─────────────────────────────────────────── */
 .lang-selector {
@@ -819,6 +835,10 @@
   background: rgba(0, 136, 170, 0.05);
 }
 [data-theme="light"] .mod-select option { background: #FFFFFF; color: #1a2a3a; }
+[data-theme="light"] .mod-input option {
+  background: #FFFFFF;
+  color: #1a2a3a;
+}
 
 /* Pagination */
 [data-theme="light"] .mod-pagination {

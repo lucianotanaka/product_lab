@@ -10,6 +10,7 @@ class ProductCreate(BaseModel):
     is_active:     bool                    = True
     status:        ProductStatus           = ProductStatus.active
     owner_user_id: Optional[int]           = None
+    company_id:    Optional[int]           = None
     tags:          List[str]               = []
 
 
@@ -19,11 +20,13 @@ class ProductUpdate(BaseModel):
     is_active:     Optional[bool]          = None
     status:        Optional[ProductStatus] = None
     owner_user_id: Optional[int]           = None
+    company_id:    Optional[int]           = None
     tags:          Optional[List[str]]     = None
 
 
 class ProductOut(BaseModel):
     product_id:    int
+    company_id:    Optional[int]           = None
     name:          str
     description:   Optional[str]          = None
     is_active:     bool                    = True

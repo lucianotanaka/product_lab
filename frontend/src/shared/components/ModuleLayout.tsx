@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
+import { useCompany } from "../../contexts/CompanyContext";
 import { apiGet } from "../services/api";
 import type { Paginated } from "../services/api";
 import ThemeToggle from "./ThemeToggle";
 import LanguageSelector from "./LanguageSelector";
 import "../styles/modules.css";
+import "../styles/hud-module-themes.css";
 
 export interface Product {
   product_id: number;
@@ -38,15 +40,17 @@ export default function ModuleLayout({
   children,
 }: Props) {
   const { user, logout } = useAuth();
+  const { companyId } = useCompany();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     if (!showProductSelector) return;
-    apiGet<Paginated<Product>>("/products?size=100")
+    const companyFilter = companyId ? `&company_id=${companyId}` : "";
+    apiGet<Paginated<Product>>(`/products?size=100${companyFilter}`)
       .then((r) => setProducts(r.items))
       .catch(() => {});
-  }, [showProductSelector]);
+  }, [showProductSelector, companyId]);
 
   const firstName = user?.user_full_name?.split(" ")[0]?.toUpperCase() ?? "USER";
 

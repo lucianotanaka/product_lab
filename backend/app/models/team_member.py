@@ -12,7 +12,8 @@ class TeamMember(Base):
     email         = Column(String(255), nullable=True)
     resource_type = Column(String(30), default="internal")   # internal | outsourced | consultant
     department    = Column(String(100), nullable=True)
-    company       = Column(String(150), nullable=True)        # se outsourced/consultant
+    company       = Column(String(150), nullable=True)        # se outsourced/consultant (texto legado)
+    company_id    = Column(Integer, nullable=True, index=True)  # FK → companies.id (adicionado via migration)
     is_active     = Column(Boolean, default=True, nullable=False)
     created_at    = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at    = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

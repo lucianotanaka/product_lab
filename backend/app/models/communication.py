@@ -75,12 +75,29 @@ class Communication(Base):
     default_language          = Column(String(10))
     default_tone              = Column(String(50))
     default_detail_level      = Column(String(30))
+    report_kind               = Column(String(60))
+    report_scope              = Column(JSONB)
+    supported_export_formats  = Column(JSONB)
     status                    = Column(String(20), nullable=False, default="DRAFT")  # DRAFT | ACTIVE | INACTIVE | ARCHIVED
     is_active                 = Column(Boolean, nullable=False, default=True)
     created_by                = Column(Integer)
     updated_by                = Column(Integer)
     created_at                = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
     updated_at                = Column(TIMESTAMP, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CommunicationLink(Base):
+    __tablename__ = "communication_links"
+
+    communication_link_id = Column(BigInteger, primary_key=True)
+    communication_id      = Column(Integer, nullable=False)
+    entity_type           = Column(String(50), nullable=False)
+    entity_id             = Column(String(100), nullable=False)
+    link_role             = Column(String(30), nullable=False, default="RELATED")
+    is_primary            = Column(Boolean, nullable=False, default=False)
+    notes                 = Column(Text)
+    created_at            = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
+    updated_at            = Column(TIMESTAMP, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class CommunicationSchedule(Base):
@@ -131,6 +148,19 @@ class AudienceMember(Base):
     created_at         = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
 
 
+class CommunicationAudience(Base):
+    __tablename__ = "communication_audiences"
+
+    communication_audience_id = Column(BigInteger, primary_key=True)
+    communication_id          = Column(Integer, nullable=False)
+    audience_id               = Column(Integer, nullable=False)
+    is_primary                = Column(Boolean, nullable=False, default=False)
+    custom_language           = Column(String(10))
+    custom_tone               = Column(String(50))
+    custom_detail_level       = Column(String(30))
+    created_at                = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
+
+
 class Publication(Base):
     __tablename__ = "publications"
 
@@ -145,7 +175,20 @@ class Publication(Base):
     published_at             = Column(TIMESTAMP)
     status                   = Column(String(30), nullable=False, default="DRAFT")  # DRAFT | GENERATING | GENERATED | IN_REVIEW | APPROVED | PUBLISHED | ARCHIVED | CANCELLED
     editorial_summary        = Column(Text)
+    rendered_html            = Column(Text)
+    export_payload           = Column(JSONB)
     version_number           = Column(Integer, nullable=False, default=1)
+    owner_name               = Column(String(200))
+    occurrence_kind          = Column(String(30), nullable=False, default="SCHEDULED")
+    operational_status       = Column(String(30), nullable=False, default="PLANNED")
+    due_at                   = Column(TIMESTAMP)
+    occurred_at              = Column(TIMESTAMP)
+    followup_id              = Column(String(36))
+    meeting_id               = Column(String(36))
+    outcome_summary          = Column(Text)
+    next_occurrence_date     = Column(Date)
+    source_reason            = Column(String(100))
+    is_followup_generated    = Column(Boolean, nullable=False, default=False)
     created_by               = Column(Integer)
     updated_by               = Column(Integer)
     created_at               = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
@@ -235,6 +278,25 @@ class PublicationReview(Base):
     comments              = Column(Text)
     performed_by          = Column(Integer)
     performed_at          = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
+
+
+class PublicationPresentation(Base):
+    __tablename__ = "publication_presentations"
+
+    presentation_id        = Column(Integer, primary_key=True)
+    publication_id         = Column(Integer, nullable=False)
+    publication_version_id = Column(Integer)
+    meeting_id             = Column(String(36))
+    presentation_date      = Column(Date, nullable=False)
+    presented_at           = Column(TIMESTAMP)
+    presented_by           = Column(Integer)
+    context_label          = Column(String(200))
+    audience_label         = Column(String(200))
+    notes                  = Column(Text)
+    presentation_mode      = Column(String(30), nullable=False, default="LIVE")
+    status                 = Column(String(20), nullable=False, default="COMPLETED")
+    created_at             = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
+    updated_at             = Column(TIMESTAMP, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class PublicationVersion(Base):

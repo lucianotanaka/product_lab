@@ -1,19 +1,17 @@
-import os
 import bcrypt as _bcrypt
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.config import settings
 from app.models.user import User
 
-SECRET_KEY  = os.getenv("SECRET_KEY", "product-lab-secret-key-2026")
-ALGORITHM   = "HS256"
-TOKEN_EXPIRE_MINUTES = 60 * 2  # 2 hours (inactivity logout handles the rest)
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+# SECRET_KEY lida exclusivamente de settings (sem fallback hardcoded)
+ALGORITHM            = "HS256"
+TOKEN_EXPIRE_MINUTES = 60 * 2  # 2 horas (logout por inatividade cobre o resto)
+COOKIE_NAME          = "pl_token"
 
 def hash_password(password: str) -> str:
     """Gera hash bcrypt diretamente (compatível com bcrypt >= 4.0)."""
@@ -30,24 +28,28 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
-    cred_exc = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Token inválido ou expirado",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+def get_current_user(
+    db: Session = Depends(get_db),
+    pl_token: Optional[str] = Cookie(default=None, alias=COOKIE_NAME),
+) -> User:
+    """Lê o JWT do cookie httpOnly 'pl_token' — inacessível a JavaScript."""
+    if not pl_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Não autenticado — faça login",
+        )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(pl_token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if not email:
-            raise cred_exc
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
     except JWTError:
-        raise cred_exc
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido ou expirado")
     user = db.query(User).filter(User.user_email == email).first()
     if not user or not user.user_is_active:
-        raise cred_exc
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuário inativo ou não encontrado")
     return user
 
 

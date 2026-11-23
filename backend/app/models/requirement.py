@@ -13,6 +13,7 @@ class Requirement(Base):
     requirement_title       = Column(String(250), nullable=False)
     requirement_description = Column(Text, nullable=False)
     requirement_type        = Column(String(30), nullable=False, default="FUNCTIONAL")
+    requirement_classification = Column(String(50), nullable=True)
     requirement_source      = Column(String(100), nullable=True)
     priority                = Column(String(20), nullable=False, default="MEDIUM")
     lifecycle_status        = Column(String(20), nullable=False, default="DRAFT")
@@ -73,4 +74,37 @@ class RequirementVerification(Base):
     evidence            = Column(Text, nullable=True)
     notes               = Column(Text, nullable=True)
     created_at          = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at          = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class RequirementHistory(Base):
+    """Field-level change log — one row per changed field per PATCH."""
+    __tablename__ = "requirement_history"
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    requirement_id  = Column(Integer, ForeignKey("requirements.id", ondelete="CASCADE"), nullable=False, index=True)
+    changed_by      = Column(String(200), nullable=True)
+    changed_at      = Column(DateTime, nullable=False, default=datetime.utcnow)
+    change_type     = Column(String(30), nullable=False)   # CREATED|UPDATED|STATUS_CHANGE|APPROVED|REJECTED|OBSOLETE|DELETED
+    field_name      = Column(String(100), nullable=True)   # NULL for CREATED events
+    old_value       = Column(Text, nullable=True)
+    new_value       = Column(Text, nullable=True)
+    change_reason   = Column(Text, nullable=True)          # mandatory for STATUS_CHANGE from APPROVED
+
+
+class RequirementChangeRequest(Base):
+    """Formal change request — required when editing an APPROVED requirement."""
+    __tablename__ = "requirement_change_requests"
+
+    id                  = Column(Integer, primary_key=True, autoincrement=True)
+    requirement_id      = Column(Integer, ForeignKey("requirements.id", ondelete="CASCADE"), nullable=False, index=True)
+    requested_by        = Column(String(200), nullable=False)
+    requested_at        = Column(DateTime, nullable=False, default=datetime.utcnow)
+    change_description  = Column(Text, nullable=False)
+    impact_analysis     = Column(Text, nullable=True)
+    priority            = Column(String(20), nullable=False, default="MEDIUM")
+    status              = Column(String(20), nullable=False, default="PENDING")  # PENDING|APPROVED|REJECTED|IMPLEMENTED
+    approved_by         = Column(String(200), nullable=True)
+    approved_at         = Column(DateTime, nullable=True)
+    rejection_reason    = Column(Text, nullable=True)
     updated_at          = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
