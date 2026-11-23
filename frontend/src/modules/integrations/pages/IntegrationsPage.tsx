@@ -372,7 +372,6 @@ export default function IntegrationsPage() {
   const currentFields = (providers[form.provider] || []).sort((a,b)=>a.sort_order-b.sort_order);
   const isAxetFlowsProvider = form.provider === "axet_flows";
   const axetEndpointMode = form.params.endpoint_mode || "auto_discovery";
-  const isAxetFixedPortMode = isAxetFlowsProvider && axetEndpointMode === "fixed_port";
   const isAxetAutoDiscoveryMode = isAxetFlowsProvider && axetEndpointMode !== "fixed_port";
 
   const visibleFields = isAxetFlowsProvider

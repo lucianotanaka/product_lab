@@ -227,10 +227,7 @@ const IM: Record<string, string> = {
 const LC = ["#1a3a5c", "#1a4a3a", "#3a2a1a", "#3a1a3a", "#1a2a4a", "#4a3a1a"];
 const ROW_LABEL_WIDTH = 180;
 const GRID_HEADER_HEIGHT = 64;
-const LW = 340,
-  LH = 1200,
-  LPT = 56,
-  LG = 18,
+const LH = 1200,
   BASE_COL_SPACING = 300,
   BASE_ROW_SPACING = 210;
 
@@ -421,7 +418,6 @@ function buildRFNodes(
   pnodes: PNode[],
   areas: BArea[],
   groups: PGroup[],
-  laneHeight: number,
   columnSpacing: number,
   rowSpacing: number,
   dark: boolean
@@ -867,9 +863,8 @@ export default function ProcessMappingPage() {
     setGraphLoading(true);
     try {
       const g = await apiGet<GraphData>(`/processes/${proc.id}/graph`);
-      const laneHeight = Math.max(LH, g.business_areas.length * rowSpacing + GRID_HEADER_HEIGHT + 120);
       setGraphData(g);
-      setRfNodes(buildRFNodes(g.nodes, g.business_areas, g.groups, laneHeight, columnSpacing, rowSpacing, dark));
+      setRfNodes(buildRFNodes(g.nodes, g.business_areas, g.groups, columnSpacing, rowSpacing, dark));
       setRfEdges(buildRFEdges(g.edges, g.nodes));
     } catch {
       setRfNodes([]);
@@ -1220,12 +1215,6 @@ export default function ProcessMappingPage() {
             const movedNode = rfNodes.find((node) => node.id === ch.id);
             const laneParentId = typeof movedNode?.parentId === "string" && movedNode.parentId.startsWith("lane-") ? movedNode.parentId : null;
             const laneAreaId = laneParentId ? Number(laneParentId.replace("lane-", "")) : null;
-            const laneIndex =
-              laneAreaId && graphData?.business_areas
-                ? [...graphData.business_areas]
-                    .sort((a, b) => a.display_order - b.display_order)
-                    .findIndex((area) => area.id === laneAreaId)
-                : 0;
             const absoluteX = ROW_LABEL_WIDTH + (ch.position.x ?? 0);
             const colIndex = Math.max(0, Math.round((absoluteX - ROW_LABEL_WIDTH - 26) / columnSpacing));
             const columnX = 36 + colIndex * columnSpacing;

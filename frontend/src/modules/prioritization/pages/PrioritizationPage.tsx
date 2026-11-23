@@ -221,7 +221,6 @@ const EMPTY = {
 };
 
 const TAB_ORDER: PrioritizationTab[] = ["QUARTER", "RICE", "ICE", "MOSCOW", "EISENHOWER", "WSJF"];
-const METHOD_ORDER: PrioritizationMethod[] = ["RICE", "ICE", "MOSCOW", "EISENHOWER", "WSJF"];
 
 const ITEM_TYPE_OPTIONS: TypeOption[] = [
   { value: "initiative", labelKey: "prioritization.item_types.initiative" },
@@ -694,7 +693,6 @@ export default function PrioritizationPage() {
   });
   const activeMethodTotal = activeMethodRows.length;
   const paginatedRows = activeMethodRows.slice((page - 1) * SIZE, page * SIZE);
-  const showMethodTable = activeTab !== "QUARTER";
   const showMoscowColumn = activeMethod === "MOSCOW";
 
   const showMoscowField = selectedMethod === "MOSCOW";

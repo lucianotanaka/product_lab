@@ -27,7 +27,6 @@ const INITIATIVE_TYPE_LABELS: Record<(typeof INITIATIVE_TYPES)[number], string> 
   operational_initiative: "Operational Initiative",
 };
 
-interface ItemType { item_type_id: number; name: string; display_order: number; is_active: boolean; }
 interface RoadmapBacklogItem {
   item_id: number;
   title: string;
