@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, List
 from io import BytesIO
 from fastapi import APIRouter, Depends, status
